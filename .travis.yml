@@ -1,0 +1,15 @@
+language: rust
+cache: cargo
+dist: trusty
+os:
+- linux
+- osx
+rust:
+- nightly
+- stable
+script:
+- cargo build
+- cargo test -- --color always --nocapture
+env:
+  global:
+    secure: NVAoXxvxNmfp/67BIKyJV4njlLtkxAL9WOjZv/5cbLXIDVcUw5bKsVtZalfh3S1pEApe+klSkPxbVQWf0tZN8eGTpKY0mmV7ALux9FJYHg/9EuhCdP11q/oAOcBzoPadzysyOSPTHtffaTZv1IE20Vv8fu96a7LH3hf3UvKcrlZZygXTsXuolp/s5/bca9whMB412gEy78k15Qk7jLyr97kqJeaZuIUW+DVCy9jkoqJu79vAQZAZwSxMc7zQVvbz7CECsOeTn34OziEa8Swx4AGvbRAo7E5+BOzyOA0Ta9vNFO9Zff+9FZhk8BzABa18EEHctxiDRbIdNADHP7apLtHRuWaiQ9lfkKE3KjQdl3Z2Iy1uBc0bl1iXw3z50PKTojcGMM3WOsehVWJQnCoJOTNW6YLArwdoWksYHBBNjzkHslF9VvfRK211TBj3NAq2GmtcvS04HP1tJXt5Pcm60p16lFBFGCER97YVyHYAmF7srT+W5TOkHBpBuo2iOEJhl72Mz2COLtfvXjaaqSicX6/1cMgXyVmw+WUUIZdCeCQLKt+aVYLFOhRSlxO6IMmsuXupQT03pWu7uhU+z/KAGdMazcRArKVbM6CBVB+DNUl30eMoilYd5nADiodv2/VgQtCk5bzHnmzzSbW2GfouFyk5ifknvI2h1U3ZwwNNzIs=
