@@ -4,13 +4,12 @@ extern crate serde_derive;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
-#[cfg(feature = "async")]
+#[cfg(feature = "asynchronous")]
 extern crate hyper;
-#[cfg(feature = "sync")]
+#[cfg(feature = "synchronous")]
 extern crate reqwest;
 
 pub mod constants;
-pub mod ddragon;
 pub mod dto;
 pub mod http;
 pub mod types;

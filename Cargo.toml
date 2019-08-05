@@ -18,8 +18,8 @@ hyper = {version = "0.12.33", optional = true}
 log = "0.4.8"
 
 [features]
-default = ["sync"]
+default = ["synchronous"]
 
-sync = ["reqwest"]
+synchronous = ["reqwest"]
 
-async = ["hyper"]
+asynchronous = ["hyper"]
