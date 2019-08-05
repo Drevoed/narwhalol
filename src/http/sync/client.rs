@@ -15,7 +15,7 @@ impl LeagueAPI {
     pub fn new_dev_client(region: Region) -> LeagueAPI {
         let client = Client::new();
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
-        let api_key = std::env::var("API_KEY").expect("Please provide API_KEY environment variable");
+        let api_key = std::env::var("RIOT_API_KEY").expect("Please provide API_KEY environment variable");
         LeagueAPI {
             client,
             api_key,
