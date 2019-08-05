@@ -16,7 +16,7 @@ enum Inner {
     OCE,
     TR,
     RU,
-    PBE
+    PBE,
 }
 
 impl Region {
@@ -59,7 +59,7 @@ impl Region {
             OCE => "OCE",
             TR => "TR",
             RU => "RU",
-            PBE => "PBE"
+            PBE => "PBE",
         }
     }
 
@@ -76,7 +76,7 @@ impl Region {
             OCE => "OC1",
             TR => "TR1",
             RU => "RU",
-            PBE => "PBE1"
+            PBE => "PBE1",
         }
     }
 }

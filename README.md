@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.com/Drevoed/narwhal.svg?branch=master)](https://travis-ci.com/Drevoed/narwhal)
 # Narwhal
 
 ***Narwhal*** is a Fast and Type-safe wrapper of DDragon and League of

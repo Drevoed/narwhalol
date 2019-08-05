@@ -9,11 +9,11 @@ extern crate hyper;
 #[cfg(feature = "sync")]
 extern crate reqwest;
 
-pub mod types;
-pub mod ddragon;
-pub mod http;
-pub mod dto;
 pub mod constants;
+pub mod ddragon;
+pub mod dto;
+pub mod http;
+pub mod types;
 
 #[cfg(test)]
 mod tests;

@@ -9,7 +9,7 @@ pub struct Summoner {
     pub summoner_level: u64,
     pub revision_date: u64,
     pub id: String,
-    pub account_id: String
+    pub account_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

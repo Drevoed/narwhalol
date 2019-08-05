@@ -9,4 +9,4 @@ rust:
 - stable
 script:
 - cargo build
-- cargo test -- --color always --nocapture
+- cargo test
