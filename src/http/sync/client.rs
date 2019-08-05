@@ -1,7 +1,7 @@
 use crate::constants::region::Region;
 use crate::dto::api::Summoner;
 use log::debug;
-use reqwest::{Client, Method, Request, Url};
+use reqwest::{Client, Method, Url};
 
 #[derive(Debug)]
 pub struct LeagueAPI {
