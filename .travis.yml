@@ -5,7 +5,6 @@ os:
 - linux
 - osx
 rust:
-- nightly
 - stable
 script:
 - cargo build
