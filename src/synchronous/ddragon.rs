@@ -1,6 +1,7 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, DDragonResponse};
 use reqwest::{Client, Url};
+use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 
 #[derive(Debug)]
@@ -37,19 +38,30 @@ impl DDragonClient {
 
     pub fn get_champions(&mut self) -> Result<AllChampions, reqwest::Error> {
         let url: Url = format!("{}/champion.json", &self.base_url).parse().unwrap();
+        self.get_parsed_or_add_raw::<AllChampions>(url)
+    }
+
+    /*pub fn get_champion(&mut self, name: &str) -> Result<ChampionDataExtended, reqwest::Error> {
+        let url: Url = format!("{}/champion/{}.json", &self.base_url, name)
+            .parse()
+            .unwrap();
+        self.get_parsed_or_add_raw::<ChampionDataExtended>(url)
+    }*/
+
+    fn get_parsed_or_add_raw<T: DeserializeOwned>(
+        &mut self,
+        url: Url,
+    ) -> Result<T, reqwest::Error> {
         match self.cache.get(&url) {
             Some(resp) => {
-                println!("Getting from cache...");
-                let champs: AllChampions = serde_json::from_str(resp).unwrap();
-                Ok(champs)
+                let returnee: T = serde_json::from_str(resp).unwrap();
+                Ok(returnee)
             }
             None => {
-                println!("Getting from DDragon...");
                 let response: String = self.client.get(url.clone()).send()?.text()?;
                 self.cache.insert(url.clone(), response);
-                let champs: AllChampions =
-                    serde_json::from_str(self.cache.get(&url).unwrap()).unwrap();
-                Ok(champs)
+                let returnee = serde_json::from_str(self.cache.get(&url).unwrap()).unwrap();
+                Ok(returnee)
             }
         }
     }

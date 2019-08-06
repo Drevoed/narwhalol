@@ -1,8 +1,12 @@
-use crate::constants::Region;
+use crate::constants::{LanguageCode, Region};
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::synchronous::client::LeagueAPI;
+use crate::synchronous::ddragon::DDragonClient;
+use std::sync::Mutex;
 
 lazy_static! {
+    static ref DDRAGON_CLIENT: Mutex<DDragonClient> =
+        Mutex::new(DDragonClient::new(LanguageCode::RUSSIA).unwrap());
     static ref LEAGUE_CLIENT: LeagueAPI = LeagueAPI::new(Region::NA);
 }
 
@@ -42,6 +46,7 @@ fn gets_champion_masteries() {
 
 #[test]
 fn gets_champion_mastery_by_id() {
+    let ddragon_client = DDRAGON_CLIENT.lock().unwrap();
     let summoner: Summoner = LEAGUE_CLIENT
         .get_summoner_by_name("Santorin")
         .expect("Something went wrong");

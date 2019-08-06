@@ -4,7 +4,8 @@ use std::collections::HashMap;
 pub struct DDragonResponse;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct AllChampions {
+pub struct AllChampions
+{
     #[serde(rename = "type")]
     pub data_type: String,
     pub format: String,
@@ -27,8 +28,6 @@ pub struct ChampionData {
     pub stats: ChampionDataStats,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct ChampionDataFull {}
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChampionDataInfo {
     pub attack: i32,
@@ -71,3 +70,52 @@ pub struct ChampionDataStats {
     pub attackspeedperlevel: f64,
     pub attackspeed: f64,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ChampionDataFull {
+    #[serde(rename = "type")]
+    pub data_type: String,
+    pub format: String,
+    pub version: String,
+    pub data: HashMap<String, ExtendedData>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ExtendedData {
+    pub skins: Vec<SkinData>,
+    pub lore: String,
+    pub allytips: Vec<String>,
+    pub enemytips: Vec<String>,
+    pub spells: Vec<SpellData>,
+    pub passive: PassiveData,
+    pub recommendeditems: Vec<RecommendedItemData>
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SkinData {
+    pub id: String,
+    pub num: i32,
+    pub name: String,
+    pub chromas: bool
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SpellData {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "abstract")]
+    pub description: String,
+    pub tooltip: String,
+    pub leveltip: SpellLevelTip,
+    pub maxrank: i32,
+    pub cooldown: [f64; 4],
+    pub 
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct SpellLevelTip {
+    pub label: Vec<String>,
+    pub effect: Vec<String>
+}
+
+
