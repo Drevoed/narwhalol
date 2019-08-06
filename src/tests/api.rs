@@ -46,16 +46,26 @@ fn gets_champion_masteries() {
 
 #[test]
 fn gets_champion_mastery_by_id() {
-    let ddragon_client = DDRAGON_CLIENT.lock().unwrap();
+    let mut ddragon_client = DDRAGON_CLIENT.lock().unwrap();
+    let ahri = ddragon_client.get_champion("LeeSin").unwrap();
     let summoner: Summoner = LEAGUE_CLIENT
         .get_summoner_by_name("Santorin")
         .expect("Something went wrong");
     let mastery: ChampionMastery = LEAGUE_CLIENT
-        .get_champion_mastery_by_id(&summoner.id, 64)
+        .get_champion_mastery_by_id(
+            &summoner.id,
+            ahri["data"]["LeeSin"]["key"]
+                .as_str()
+                .unwrap()
+                .parse()
+                .unwrap(),
+        )
         .expect(&format!(
             "Could not get champion mastery for champion id {}",
-            64
+            ahri["data"]["LeeSin"]["key"].as_str().unwrap()
         ));
+
+    println!("mastery: {:#?}", &mastery);
     assert_eq!(mastery.champion_id, 64);
     assert_eq!(mastery.champion_level, 7);
     assert!(mastery.champion_points >= 93748)

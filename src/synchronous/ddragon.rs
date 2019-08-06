@@ -41,12 +41,12 @@ impl DDragonClient {
         self.get_parsed_or_add_raw::<AllChampions>(url)
     }
 
-    /*pub fn get_champion(&mut self, name: &str) -> Result<ChampionDataExtended, reqwest::Error> {
+    pub fn get_champion(&mut self, name: &str) -> Result<serde_json::Value, reqwest::Error> {
         let url: Url = format!("{}/champion/{}.json", &self.base_url, name)
             .parse()
             .unwrap();
-        self.get_parsed_or_add_raw::<ChampionDataExtended>(url)
-    }*/
+        self.get_parsed_or_add_raw(url)
+    }
 
     fn get_parsed_or_add_raw<T: DeserializeOwned>(
         &mut self,

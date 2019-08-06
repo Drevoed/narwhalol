@@ -4,8 +4,7 @@ use std::collections::HashMap;
 pub struct DDragonResponse;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct AllChampions
-{
+pub struct AllChampions {
     #[serde(rename = "type")]
     pub data_type: String,
     pub format: String,
@@ -71,7 +70,7 @@ pub struct ChampionDataStats {
     pub attackspeed: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+/*#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ChampionDataFull {
     #[serde(rename = "type")]
     pub data_type: String,
@@ -109,13 +108,11 @@ pub struct SpellData {
     pub leveltip: SpellLevelTip,
     pub maxrank: i32,
     pub cooldown: [f64; 4],
-    pub 
+    pub
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct SpellLevelTip {
     pub label: Vec<String>,
     pub effect: Vec<String>
-}
-
-
+}*/
