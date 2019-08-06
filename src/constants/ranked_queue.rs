@@ -14,12 +14,12 @@ enum Inner {
 
 impl RankedQueue {
     /// Solo ranked queue
-    pub const Solo: RankedQueue = RankedQueue(Solo);
+    pub const SOLO: RankedQueue = RankedQueue(Solo);
     /// Flex ranked queue
-    pub const Flex: RankedQueue = RankedQueue(Flex);
+    pub const FLEX: RankedQueue = RankedQueue(Flex);
     //TODO mark as deprecated when update that removes TT will be dropped
     /// Twisted Treeline ranked queue (soon will be deprecated)
-    pub const TwistedTreeline: RankedQueue = RankedQueue(TwistedTreeline);
+    pub const TWISTED_TREELINE: RankedQueue = RankedQueue(TwistedTreeline);
 
     #[inline]
     pub fn as_str(&self) -> &str {
