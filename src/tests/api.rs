@@ -1,6 +1,6 @@
-use crate::constants::region::Region;
+use crate::constants::Region;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
-use crate::http::synchronous::client::LeagueAPI;
+use crate::synchronous::client::LeagueAPI;
 
 lazy_static! {
     static ref LEAGUE_CLIENT: LeagueAPI = LeagueAPI::new(Region::NA);

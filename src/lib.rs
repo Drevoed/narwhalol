@@ -9,9 +9,12 @@ extern crate hyper;
 #[cfg(feature = "synchronous")]
 extern crate reqwest;
 
+#[cfg(feature = "asynchronous")]
+pub mod asynchronous;
 pub mod constants;
 pub mod dto;
-pub mod http;
+#[cfg(feature = "synchronous")]
+pub mod synchronous;
 pub mod types;
 
 #[cfg(test)]

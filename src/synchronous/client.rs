@@ -1,4 +1,4 @@
-use crate::constants::region::Region;
+use crate::constants::Region;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use log::debug;
 use reqwest::{Client, Method, Url};
@@ -109,5 +109,11 @@ impl LeagueAPI {
             .send()?
             .json()?;
         Ok(score)
+    }
+}
+
+impl Default for LeagueAPI {
+    fn default() -> LeagueAPI {
+        LeagueAPI::new(Region::default())
     }
 }

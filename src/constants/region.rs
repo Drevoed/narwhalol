@@ -1,5 +1,7 @@
 use self::Inner::*;
 
+use std::convert::AsRef;
+
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct Region(Inner);
 
@@ -63,6 +65,7 @@ impl Region {
         }
     }
 
+    #[inline]
     pub fn as_platform_str(&self) -> &str {
         match self.0 {
             BR => "BR1",
@@ -78,5 +81,19 @@ impl Region {
             RU => "RU",
             PBE => "PBE1",
         }
+    }
+}
+
+impl AsRef<str> for Region {
+    #[inline]
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Default for Region {
+    #[inline]
+    fn default() -> Region {
+        Region::NA
     }
 }

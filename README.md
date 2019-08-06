@@ -10,12 +10,22 @@ getting useful data directly from Riot servers.
 Zero cost abstractions and compile-time optimizations used in Rust is
 what makes this library so fast.
 
-#### Benchmarks
+## Advantages 
+- Support of many std Traits allowing hands-free convertations between types
+- Clean and concise Error messages
+- Caching of DDragon requests (work-in-progress)
+- Is in development stage, issues and bugs will be fixed ASAP
+
+## Benchmarks
 
 ```rust
+
 ```
 
-#### Examples
+## Example
 
-```rust
+```rust,no_run
+extern crate narhwal;
+
+use narwhal::
 ```
