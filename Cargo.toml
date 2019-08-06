@@ -7,6 +7,9 @@ edition = "2018"
 license = "MIT"
 readme = "README.md"
 
+[badges]
+travis-ci = {repository = "Drevoed/narwhal", branch = "master"}
+codecov = {repository = "Drevoed/narwhal", branch = "master", service = "github"}
 
 [dependencies]
 serde = "1.0.98"

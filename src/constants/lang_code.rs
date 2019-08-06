@@ -184,3 +184,8 @@ impl fmt::Display for LanguageCode {
         fmt.write_str(self.as_ref())
     }
 }
+
+#[test]
+fn lang_code_returns_correct_lang_string() {
+    assert_eq!(LanguageCode::TURKEY, "tr_TR")
+}

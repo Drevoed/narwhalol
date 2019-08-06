@@ -12,18 +12,10 @@ lazy_static! {
 #[test]
 fn ddragon_caches_properly() {
     let mut client = DDRAGON_CLIENT.lock().unwrap();
-    let now: Instant = Instant::now();
     let champs = client.get_champions().unwrap();
-    println!(
-        "Time spent getting from cdn: {:#?}",
-        now.elapsed().as_nanos()
-    );
-    let now: Instant = Instant::now();
     drop(champs);
+    let now = Instant::now();
     let champs: AllChampions = client.get_champions().unwrap();
-    println!(
-        "Time spent getting from cache: {:#?}",
-        now.elapsed().as_millis()
-    );
+    assert!(now.elapsed().as_millis() < 100);
     assert_eq!("103", &champs.data.get("Ahri").unwrap().key);
 }

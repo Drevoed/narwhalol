@@ -15,7 +15,6 @@ fn gets_summoner_data() {
     let summoner = LEAGUE_CLIENT
         .get_summoner_by_name("Santorin")
         .expect("Something went wrong");
-    println!("Got summoner: {:#?}", &summoner);
     assert_eq!(
         &summoner.account_id,
         "rPnj4h5W6OhejxB-AO3hLOQctgZcckqV_82N_8_WuCFdO2A"
@@ -28,7 +27,6 @@ fn gets_champion_info() {
     let champ_info: ChampionInfo = LEAGUE_CLIENT
         .get_champion_info()
         .expect("Could not get champion info");
-    println!("Got champion info: {:#?}", &champ_info);
     assert!(champ_info.free_champion_ids.len() > 10);
     assert!(champ_info.free_champion_ids_for_new_players.len() > 0);
     assert_ne!(champ_info.max_new_player_level, 0)
@@ -66,7 +64,6 @@ fn gets_champion_mastery_by_id() {
             ahri["data"]["LeeSin"]["key"].as_str().unwrap()
         ));
 
-    println!("mastery: {:#?}", &mastery);
     assert_eq!(mastery.champion_id, 64);
     assert_eq!(mastery.champion_level, 7);
     assert!(mastery.champion_points >= 93748)

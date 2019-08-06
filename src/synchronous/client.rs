@@ -31,13 +31,13 @@ impl LeagueAPI {
         let url: Url = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
             .parse()
             .unwrap();
+        debug!("Constructed url: {:?}", &url);
         let summoner = self
             .client
             .request(Method::GET, url)
             .header("X-Riot-Token", &self.api_key)
             .send()?
             .json()?;
-        debug!("Got summoner: {:?}", &summoner);
         Ok(summoner)
     }
 

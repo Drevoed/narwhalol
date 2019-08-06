@@ -84,3 +84,8 @@ impl fmt::Display for RankedQueue {
         fmt.write_str(self.as_ref())
     }
 }
+
+#[test]
+fn solo_is_ranked_flex() {
+    assert_eq!(RankedQueue::SOLO, "RANKED_SOLO_5x5")
+}
