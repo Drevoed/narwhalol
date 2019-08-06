@@ -23,6 +23,7 @@ fn gets_summoner_data() {
 }
 
 #[test]
+
 fn gets_champion_info() {
     let champ_info: ChampionInfo = LEAGUE_CLIENT
         .get_champion_info()
