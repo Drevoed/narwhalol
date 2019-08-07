@@ -1,10 +1,11 @@
-extern crate narwhal;
+extern crate narwhalol;
 
-use narwhal::constants::Region;
-use narwhal::dto::api::Summoner;
-use narwhal::synchronous::client::LeagueAPI;
+use narwhalol::constants::Region;
+use narwhalol::dto::api::Summoner;
+use narwhalol::synchronous::client::LeagueAPI;
 
-fn main() {
-    let client = LeagueAPI::new(Region::KR);
+fn main() -> Result<(), failure::Error> {
+    let client = LeagueAPI::new(Region::KR).expect("Please provide API_KEY environment variable");
     let summoner: Summoner = client.get_summoner_by_name("Hide on bush").unwrap();
+    Ok(())
 }

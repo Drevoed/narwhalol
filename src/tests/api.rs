@@ -2,12 +2,14 @@ use crate::constants::{LanguageCode, Region};
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::synchronous::client::LeagueAPI;
 use crate::synchronous::ddragon::DDragonClient;
+use failure::Error;
 use std::sync::Mutex;
 
 lazy_static! {
     static ref DDRAGON_CLIENT: Mutex<DDragonClient> =
         Mutex::new(DDragonClient::new(LanguageCode::RUSSIA).unwrap());
-    static ref LEAGUE_CLIENT: LeagueAPI = LeagueAPI::new(Region::NA);
+    static ref LEAGUE_CLIENT: LeagueAPI =
+        LeagueAPI::new(Region::NA).expect("Please provide API_KEY environment variable");
 }
 
 #[test]

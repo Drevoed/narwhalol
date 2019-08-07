@@ -32,7 +32,6 @@ impl DDragonClient {
             base_url,
             cache,
         };
-        println!("Got ddragon: {:#?}", &ddragon);
         Ok(ddragon)
     }
 
