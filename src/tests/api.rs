@@ -25,13 +25,12 @@ fn gets_summoner_data() {
 
 #[test]
 
-fn gets_champion_info() {
-    let champ_info: ChampionInfo = LEAGUE_CLIENT
-        .get_champion_info()
-        .expect("Could not get champion info");
+fn gets_champion_info() -> Result<(), reqwest::Error> {
+    let client = LeagueAPI::new(Region::RU).unwrap();
+    let champ_info = client.get_champion_info()?;
     assert!(champ_info.free_champion_ids.len() > 10);
     assert!(champ_info.free_champion_ids_for_new_players.len() > 0);
-    assert_ne!(champ_info.max_new_player_level, 0)
+    Ok(assert_ne!(champ_info.max_new_player_level, 0))
 }
 
 #[test]

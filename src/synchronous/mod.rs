@@ -1,4 +1,4 @@
 pub mod client;
 pub mod ddragon;
 
-pub use client::{LeagueAPI, LeagueError};
+pub use client::LeagueAPI;
