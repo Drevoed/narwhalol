@@ -8,6 +8,10 @@ edition = "2018"
 license = "MIT"
 readme = "README.md"
 
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-unknown-linux-gnu"
+
 [badges]
 travis-ci = {repository = "Drevoed/narwhal", branch = "master"}
 codecov = {repository = "Drevoed/narwhal", branch = "master", service = "github"}
