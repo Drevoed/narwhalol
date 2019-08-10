@@ -1,9 +1,9 @@
 use crate::constants::{LanguageCode, Region};
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
-use crate::synchronous::client::LeagueAPI;
+use crate::synchronous::client::{LeagueAPI};
 use crate::synchronous::ddragon::DDragonClient;
-use failure::Error;
 use std::sync::Mutex;
+use crate::error::ApiError;
 
 lazy_static! {
     static ref DDRAGON_CLIENT: Mutex<DDragonClient> =
@@ -25,9 +25,8 @@ fn gets_summoner_data() {
 
 #[test]
 
-fn gets_champion_info() -> Result<(), reqwest::Error> {
-    let client = LeagueAPI::new(Region::RU).unwrap();
-    let champ_info = client.get_champion_info()?;
+fn gets_champion_info() -> Result<(), ApiError> {
+    let champ_info = LEAGUE_CLIENT.get_champion_info()?;
     assert!(champ_info.free_champion_ids.len() > 10);
     assert!(champ_info.free_champion_ids_for_new_players.len() > 0);
     Ok(assert_ne!(champ_info.max_new_player_level, 0))
