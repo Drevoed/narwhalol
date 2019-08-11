@@ -2,13 +2,11 @@ language: rust
 cache: cargo
 dist: trusty
 sudo: true
-before_install:
-  - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
 before_cache:
   - cargo prune
   - |
     if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-      cargo install grcov
+      cargo install cargo-tarpaulin
     fi
 before_script:
   - |
@@ -21,10 +19,10 @@ rust:
 - nightly
 script:
 - cargo clean
-- cargo test --verbose
-after_success:
-  - |
-    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
-      grcov target/debug -t lcov > lcov.info
-      bash <(curl -s https://codecov.io/bash) -f lcov.info
-    fi
+- cargo build
+- cargo test
+after_success: |
+  if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+    cargo tarpaulin -v --out Xml
+    bash <(curl -s https://codecov.io/bash)
+  fi
