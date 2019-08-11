@@ -6,6 +6,10 @@ before_install:
   - curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
 before_cache:
   - cargo prune
+  - |
+    if [[ "$TRAVIS_RUST_VERSION" == nightly ]]; then
+      cargo install grcov
+    fi
 before_script:
   - |
     (which cargo-install-update && cargo install-update cargo-update) || cargo install cargo-update &&
