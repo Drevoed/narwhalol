@@ -1,5 +1,5 @@
 use crate::constants::LanguageCode;
-use crate::dto::ddragon::AllChampions;
+use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -40,11 +40,13 @@ impl DDragonClient {
         self.get_parsed_or_add_raw::<AllChampions>(url)
     }
 
-    pub fn get_champion(&mut self, name: &str) -> Result<serde_json::Value, reqwest::Error> {
+    pub fn get_champion(&mut self, name: &str) -> Result<ChampionFullData, reqwest::Error> {
         let url: Url = format!("{}/champion/{}.json", &self.base_url, name)
             .parse()
             .unwrap();
-        self.get_parsed_or_add_raw(url)
+        let mut ext = self.get_parsed_or_add_raw::<ChampionExtended>(url).unwrap();
+        let champ = ext.data.remove(name).unwrap();
+        Ok(champ)
     }
 
     fn get_parsed_or_add_raw<T: DeserializeOwned>(
@@ -64,16 +66,21 @@ impl DDragonClient {
             }
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn print_cache(&self) {
+        println!("cache: {:#?}", self.cache.keys().collect::<Vec<_>>())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::dto::ddragon::AllChampions;
+    use crate::dto::ddragon::{AllChampions, ChampionFullData};
     use crate::DDRAGON_CLIENT;
     use std::time::Instant;
 
     #[test]
-    fn ddragon_caches_properly() {
+    fn caches_properly() {
         let mut client = DDRAGON_CLIENT.lock().unwrap();
         let champs = client.get_champions().unwrap();
         drop(champs);
@@ -81,5 +88,13 @@ mod tests {
         let champs: AllChampions = client.get_champions().unwrap();
         assert!(now.elapsed().as_millis() < 100);
         assert_eq!("103", &champs.data.get("Ahri").unwrap().key);
+    }
+
+    #[test]
+    fn gets_full_champion_data() {
+        let mut client = DDRAGON_CLIENT.lock().unwrap();
+        let xayah: ChampionFullData = client.get_champion("Xayah").unwrap();
+        assert_eq!(xayah.name, "Xayah");
+        client.print_cache()
     }
 }
