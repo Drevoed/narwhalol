@@ -1,5 +1,5 @@
-[![Build Status](https://travis-ci.com/Drevoed/narwhal.svg?branch=master)](https://travis-ci.com/Drevoed/narwhal)
-[![Code Coverage](https://codecov.io/gh/Drevoed/narwhal/branch/master/graph/badge.svg)](https://codecov.io/gh/Drevoed/narwhal)
+[![Build Status](https://travis-ci.com/Drevoed/narwhalol.svg?branch=master)](https://travis-ci.com/Drevoed/narwhal)
+[![Code Coverage](https://codecov.io/gh/Drevoed/narwhalol/branch/master/graph/badge.svg)](https://codecov.io/gh/Drevoed/narwhal)
 [![License](https://img.shields.io/crates/l/narwhalol)](https://github.com/Drevoed/narwhal/blob/master/LICENSE.txt)
 [![Latest Version](https://img.shields.io/crates/v/narwhalol)](https://crates.io/crates/narwhalol)
 [![Documentation](https://docs.rs/narwhalol/badge.svg)](https://docs.rs/narwhalol)
