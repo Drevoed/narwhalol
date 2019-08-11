@@ -112,11 +112,22 @@ impl LeagueAPI {
             405 => MethodNotAllowed.fail(),
             415 => UnsupportedMediaType.fail(),
             429 => RateLimitExceeded {limit: 0_usize}.fail(),
-            500 => BadGateway.fail(),
+            500 => InternalServerError.fail(),
+            502 => BadGateway.fail(),
             503 => ServiceUnavailable {region: self.region.clone()}.fail(),
             504 => GatewayTimeout.fail(),
             _ => Ok(())
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn get_status(&self, status: i32) -> ApiResult<()> {
+        let url: Url = format!("https://httpstat.us/{}", status).parse().unwrap();
+        let mut resp = self
+            .client
+            .get(url)
+            .send().context(Other {})?;
+        self.check_status(&resp.status())
     }
 }
 
