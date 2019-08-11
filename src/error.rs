@@ -44,7 +44,7 @@ mod api_tests {
     ($expression:expr, $($pattern:tt)+) => {
         match $expression {
             $($pattern)+ => (),
-            ref e => panic!("Asserion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
+            ref e => panic!("Assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
         }
     };
 }

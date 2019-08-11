@@ -163,7 +163,7 @@ mod tests {
         assert_ne!(masteries.len(), 0);
     }
 
-    #[test]
+    /*#[test]
     fn gets_champion_mastery_by_id() {
         let mut ddragon_client = DDRAGON_CLIENT.lock().unwrap();
         let ahri = ddragon_client.get_champion("LeeSin").unwrap();
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(mastery.champion_id, 64);
         assert_eq!(mastery.champion_level, 7);
         assert!(mastery.champion_points >= 93748)
-    }
+    }*/
 
     #[test]
     fn gets_total_mastery_score() {
