@@ -8,7 +8,7 @@ use std::env;
 use std::fmt;
 use reqwest::header::{self, HeaderMap, HeaderValue};
 use snafu::ResultExt;
-use crate::error::{ApiError, Other};
+use crate::error::{*};
 
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
@@ -39,7 +39,7 @@ impl LeagueAPI {
         })
     }
 
-    pub fn get_summoner_by_name(&self, name: &str) -> Result<Summoner, ApiError> {
+    pub fn get_summoner_by_name(&self, name: &str) -> ApiResult<Summoner> {
         trace!("Getting summoner with name: {}", &name);
         let url: Url = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
             .parse()
@@ -48,7 +48,7 @@ impl LeagueAPI {
         Ok(self.get_and_deserialize(url)?)
     }
 
-    pub fn get_champion_info(&self) -> Result<ChampionInfo, ApiError> {
+    pub fn get_champion_info(&self) -> ApiResult<ChampionInfo> {
         let url: Url = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
@@ -58,7 +58,7 @@ impl LeagueAPI {
     pub fn get_champion_masteries(
         &self,
         summoner_id: &str,
-    ) -> Result<Vec<ChampionMastery>, ApiError> {
+    ) -> ApiResult<Vec<ChampionMastery>> {
         trace!("Getting champion masteries for id: {}", &summoner_id);
         let url: Url = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
@@ -73,7 +73,7 @@ impl LeagueAPI {
         &self,
         summoner_id: &str,
         champion_id: i64,
-    ) -> Result<ChampionMastery, ApiError> {
+    ) -> ApiResult<ChampionMastery> {
         let url: Url = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
             self.base_url, summoner_id, champion_id
@@ -83,7 +83,7 @@ impl LeagueAPI {
         Ok(self.get_and_deserialize(url)?)
     }
 
-    pub fn get_total_mastery_score(&self, summoner_id: &str) -> Result<i32, ApiError> {
+    pub fn get_total_mastery_score(&self, summoner_id: &str) -> ApiResult<i32> {
         let url: Url = format!(
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
@@ -93,19 +93,30 @@ impl LeagueAPI {
         Ok(self.get_and_deserialize(url)?)
     }
 
-    pub fn get_and_deserialize<T: DeserializeOwned>(&self, url: Url) -> Result<T, ApiError> {
+    fn get_and_deserialize<T: DeserializeOwned>(&self, url: Url) -> ApiResult<T> {
         let mut resp = self
             .client
             .get(url)
             .send().context(Other {})?;
-        if !resp.status().is_success() {
-            if resp.status().as_u16() == 503 {
-                return Err(self.region.clone().into())
-            }
-            return Err(resp.into())
-        }
+        self.check_status(&resp.status())?;
         let deserialized: T = resp.json().context(Other {})?;
         Ok(deserialized)
+    }
+
+    fn check_status (&self, code: &StatusCode) -> ApiResult<()> {
+        match code.as_u16() {
+            400 => BadRequest.fail(),
+            401 => Unauthorized.fail(),
+            403 => Forbidden.fail(),
+            404 => DataNotFound.fail(),
+            405 => MethodNotAllowed.fail(),
+            415 => UnsupportedMediaType.fail(),
+            429 => RateLimitExceeded {limit: 0_usize}.fail(),
+            500 => BadGateway.fail(),
+            503 => ServiceUnavailable {region: self.region.clone()}.fail(),
+            504 => GatewayTimeout.fail(),
+            _ => Ok(())
+        }
     }
 }
 

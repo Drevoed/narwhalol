@@ -4,7 +4,10 @@ use reqwest::Response;
 use reqwest::StatusCode;
 use self::ApiError::*;
 
+pub type ApiResult<T, E = ApiError> = Result<T, E>;
+
 #[derive(Debug, Snafu)]
+#[snafu(visibility(pub(crate)))]
 pub enum ApiError {
     #[snafu(display("Got 400: Bad Request"))]
     BadRequest,
@@ -30,30 +33,5 @@ pub enum ApiError {
     GatewayTimeout,
 
     #[snafu(display("reqwest errored: {}", source))]
-    #[snafu(visibility(pub(crate)))]
     Other { source: reqwest::Error },
-}
-
-impl From<Response> for ApiError {
-    fn from(r: Response) -> Self {
-        match r.status().as_u16() {
-            400 => ApiError::BadRequest,
-            401 => ApiError::Unauthorized,
-            403 => ApiError::Forbidden,
-            404 => ApiError::DataNotFound,
-            405 => ApiError::MethodNotAllowed,
-            415 => ApiError::UnsupportedMediaType,
-            429 => ApiError::RateLimitExceeded {limit: 0},
-            500 => ApiError::BadGateway,
-            504 => ApiError::GatewayTimeout,
-            _ => unreachable!()
-        }
-    }
-}
-
-//503 handler
-impl From<Region> for ApiError {
-    fn from(region: Region) -> Self {
-        ApiError::ServiceUnavailable {region}
-    }
 }
