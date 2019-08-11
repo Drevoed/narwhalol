@@ -1,8 +1,6 @@
-
 use crate::constants::Region;
 
-
-use snafu::{Snafu};
+use snafu::Snafu;
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 

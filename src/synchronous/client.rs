@@ -9,7 +9,6 @@ use serde::de::DeserializeOwned;
 use snafu::ResultExt;
 use std::env;
 
-
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
 pub struct LeagueAPI {
@@ -130,13 +129,9 @@ impl Default for LeagueAPI {
 
 #[cfg(test)]
 mod tests {
-    
     use crate::dto::api::{ChampionMastery, Summoner};
     use crate::error::ApiError;
-    
-    
     use crate::{DDRAGON_CLIENT, LEAGUE_CLIENT};
-    
 
     #[test]
     fn gets_summoner_data() {
