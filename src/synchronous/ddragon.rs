@@ -1,5 +1,5 @@
 use crate::constants::LanguageCode;
-use crate::dto::ddragon::{AllChampions, DDragonResponse};
+use crate::dto::ddragon::{AllChampions};
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;

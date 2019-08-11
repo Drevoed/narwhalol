@@ -19,9 +19,9 @@ pub mod synchronous;
 pub mod types;
 pub mod utils;
 
-use constants::{LanguageCode, Region};
-use std::sync::Mutex;
-use synchronous::{client::LeagueAPI, ddragon::DDragonClient};
+
+
+
 
 #[cfg(test)]
 lazy_static! {

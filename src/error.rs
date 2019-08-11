@@ -1,8 +1,8 @@
-use self::ApiError::*;
+
 use crate::constants::Region;
-use reqwest::Response;
-use reqwest::StatusCode;
-use snafu::{ensure, Backtrace, ErrorCompat, ResultExt, Snafu};
+
+
+use snafu::{Snafu};
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 

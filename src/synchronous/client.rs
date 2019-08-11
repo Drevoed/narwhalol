@@ -2,13 +2,13 @@ use crate::constants::Region;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
 use log::{debug, trace};
-use reqwest::header::{self, HeaderMap, HeaderValue};
-use reqwest::{Client, Method, Url};
+use reqwest::header::{HeaderMap, HeaderValue};
+use reqwest::{Client, Url};
 use reqwest::{ClientBuilder, StatusCode};
 use serde::de::DeserializeOwned;
 use snafu::ResultExt;
 use std::env;
-use std::fmt;
+
 
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
@@ -117,7 +117,7 @@ impl LeagueAPI {
     #[cfg(test)]
     pub(crate) fn get_status(&self, status: i32) -> ApiResult<()> {
         let url: Url = format!("https://httpstat.us/{}", status).parse().unwrap();
-        let mut resp = self.client.get(url).send().context(Other {})?;
+        let resp = self.client.get(url).send().context(Other {})?;
         self.check_status(&resp.status())
     }
 }
@@ -130,13 +130,13 @@ impl Default for LeagueAPI {
 
 #[cfg(test)]
 mod tests {
-    use crate::constants::{LanguageCode, Region};
-    use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
+    
+    use crate::dto::api::{ChampionMastery, Summoner};
     use crate::error::ApiError;
-    use crate::synchronous::client::LeagueAPI;
-    use crate::synchronous::ddragon::DDragonClient;
+    
+    
     use crate::{DDRAGON_CLIENT, LEAGUE_CLIENT};
-    use std::sync::Mutex;
+    
 
     #[test]
     fn gets_summoner_data() {

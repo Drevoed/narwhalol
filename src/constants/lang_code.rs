@@ -186,7 +186,7 @@ impl fmt::Display for LanguageCode {
 }
 
 mod tests {
-    use super::LanguageCode;
+    
 
     #[test]
     fn lang_code_returns_correct_lang_string() {
