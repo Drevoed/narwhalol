@@ -85,7 +85,18 @@ impl fmt::Display for RankedQueue {
     }
 }
 
-#[test]
-fn solo_is_ranked_flex() {
-    assert_eq!(RankedQueue::SOLO, "RANKED_SOLO_5x5")
+#[cfg(test)]
+mod tests {
+    use super::RankedQueue;
+
+    #[test]
+    fn solo_is_ranked_flex() {
+        assert_eq!(RankedQueue::SOLO, "RANKED_SOLO_5x5")
+    }
+
+    #[test]
+    fn ranked_queue_properly_converts_to_str_ref() {
+        let five_x_five = RankedQueue::SOLO;
+        assert_eq!(&five_x_five, "RANKED_SOLO_5x5")
+    }
 }

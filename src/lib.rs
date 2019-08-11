@@ -13,12 +13,20 @@ extern crate reqwest;
 pub mod asynchronous;
 pub mod constants;
 pub mod dto;
-pub mod utils;
+pub mod error;
 #[cfg(feature = "synchronous")]
 pub mod synchronous;
 pub mod types;
-pub mod error;
+pub mod utils;
 
+use constants::{LanguageCode, Region};
+use std::sync::Mutex;
+use synchronous::{client::LeagueAPI, ddragon::DDragonClient};
 
 #[cfg(test)]
-mod tests;
+lazy_static! {
+    pub(crate) static ref DDRAGON_CLIENT: Mutex<DDragonClient> =
+        Mutex::new(DDragonClient::new(LanguageCode::RUSSIA).unwrap());
+    pub(crate) static ref LEAGUE_CLIENT: LeagueAPI =
+        LeagueAPI::new(Region::NA).expect("Please provide API_KEY environment variable");
+}

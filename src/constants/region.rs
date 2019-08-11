@@ -98,7 +98,12 @@ impl Default for Region {
     }
 }
 
-#[test]
-fn region_gets_correct_platform_string() {
-    assert_eq!(Region::NA.as_platform_str(), "NA1")
+#[cfg(test)]
+mod tests {
+    use super::Region;
+
+    #[test]
+    fn region_gets_correct_platform_string() {
+        assert_eq!(Region::NA.as_platform_str(), "NA1")
+    }
 }

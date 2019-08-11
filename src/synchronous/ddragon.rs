@@ -65,3 +65,21 @@ impl DDragonClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::dto::ddragon::AllChampions;
+    use crate::DDRAGON_CLIENT;
+    use std::time::Instant;
+
+    #[test]
+    fn ddragon_caches_properly() {
+        let mut client = DDRAGON_CLIENT.lock().unwrap();
+        let champs = client.get_champions().unwrap();
+        drop(champs);
+        let now = Instant::now();
+        let champs: AllChampions = client.get_champions().unwrap();
+        assert!(now.elapsed().as_millis() < 100);
+        assert_eq!("103", &champs.data.get("Ahri").unwrap().key);
+    }
+}

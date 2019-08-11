@@ -185,7 +185,11 @@ impl fmt::Display for LanguageCode {
     }
 }
 
-#[test]
-fn lang_code_returns_correct_lang_string() {
-    assert_eq!(LanguageCode::TURKEY, "tr_TR")
+mod tests {
+    use super::LanguageCode;
+
+    #[test]
+    fn lang_code_returns_correct_lang_string() {
+        assert_eq!(LanguageCode::TURKEY, "tr_TR")
+    }
 }
