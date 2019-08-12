@@ -2,8 +2,6 @@ use crate::constants::Region;
 
 use snafu::Snafu;
 
-pub type ApiResult<T, E = ApiError> = Result<T, E>;
-
 macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
         match $expression {
@@ -15,7 +13,7 @@ macro_rules! assert_matches {
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
-pub enum ApiError {
+pub enum ClientError {
     #[snafu(display("Got 400: Bad Request"))]
     BadRequest,
     #[snafu(display("Got 401: Unauthorized"))]
@@ -39,17 +37,14 @@ pub enum ApiError {
     #[snafu(display("Got 504: Gateway timeout"))]
     GatewayTimeout,
 
-    #[snafu(display("reqwest errored: {}", source))]
-    ReqwestError { source: reqwest::Error },
+    #[snafu(display("could not parse url"))]
+    UrlNotParsed,
 
     #[snafu(display("hyper errored: {}", source))]
-    HyperError { source: reqwest::hyper::Error },
-
-    #[snafu(display("could not parse reqwest url: {}", source))]
-    ReqwestUrlNotParsed { source: reqwest::UrlError }
+    Other { source: hyper::Error }
 }
 
-impl ApiError {
+impl ClientError {
     pub fn check_status(region: Region, code: u16) -> ApiResult<()> {
         match code {
             400 => BadRequest.fail(),
@@ -61,10 +56,7 @@ impl ApiError {
             429 => RateLimitExceeded { limit: 0_usize }.fail(),
             500 => InternalServerError.fail(),
             502 => BadGateway.fail(),
-            503 => ServiceUnavailable {
-                region
-            }
-                .fail(),
+            503 => ServiceUnavailable { region }.fail(),
             504 => GatewayTimeout.fail(),
             _ => Ok(()),
         }
@@ -90,19 +82,19 @@ mod api_error_tests {
         let bad_g_err = LEAGUE_CLIENT.get_status(502).unwrap_err();
         let service_err = LEAGUE_CLIENT.get_status(503).unwrap_err();
         let gateway_t_err = LEAGUE_CLIENT.get_status(504).unwrap_err();
-        assert_matches!(bad_r_err, ApiError::BadRequest);
-        assert_matches!(unauthorized_err, ApiError::Unauthorized);
-        assert_matches!(forbidden_err, ApiError::Forbidden);
-        assert_matches!(not_found_err, ApiError::DataNotFound);
-        assert_matches!(method_not_allowed_err, ApiError::MethodNotAllowed);
-        assert_matches!(unsupported_media_err, ApiError::UnsupportedMediaType);
-        assert_matches!(rate_err, ApiError::RateLimitExceeded { limit: 0 });
-        assert_matches!(internal_err, ApiError::InternalServerError);
-        assert_matches!(bad_g_err, ApiError::BadGateway);
+        assert_matches!(bad_r_err, ClientError::BadRequest);
+        assert_matches!(unauthorized_err, ClientError::Unauthorized);
+        assert_matches!(forbidden_err, ClientError::Forbidden);
+        assert_matches!(not_found_err, ClientError::DataNotFound);
+        assert_matches!(method_not_allowed_err, ClientError::MethodNotAllowed);
+        assert_matches!(unsupported_media_err, ClientError::UnsupportedMediaType);
+        assert_matches!(rate_err, ClientError::RateLimitExceeded { limit: 0 });
+        assert_matches!(internal_err, ClientError::InternalServerError);
+        assert_matches!(bad_g_err, ClientError::BadGateway);
         assert_matches!(
             service_err,
-            ApiError::ServiceUnavailable { region: Region::NA }
+            ClientError::ServiceUnavailable { region: Region::NA }
         );
-        assert_matches!(gateway_t_err, ApiError::GatewayTimeout)
+        assert_matches!(gateway_t_err, ClientError::GatewayTimeout)
     }
 }
