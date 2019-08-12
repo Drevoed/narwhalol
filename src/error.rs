@@ -40,13 +40,35 @@ pub enum ApiError {
     GatewayTimeout,
 
     #[snafu(display("reqwest errored: {}", source))]
-    Other { source: reqwest::Error },
-    #[snafu(display("could not parse url: {}", source))]
-    UrlNotParsed { source: reqwest::UrlError }
+    ReqwestError { source: reqwest::Error },
+
+    #[snafu(display("hyper errored: {}", source))]
+    HyperError { source: reqwest::hyper::Error },
+
+    #[snafu(display("could not parse reqwest url: {}", source))]
+    ReqwestUrlNotParsed { source: reqwest::UrlError }
 }
 
-pub enum DDragonError {
-
+impl ApiError {
+    pub fn check_status(region: Region, code: u16) -> ApiResult<()> {
+        match code {
+            400 => BadRequest.fail(),
+            401 => Unauthorized.fail(),
+            403 => Forbidden.fail(),
+            404 => DataNotFound.fail(),
+            405 => MethodNotAllowed.fail(),
+            415 => UnsupportedMediaType.fail(),
+            429 => RateLimitExceeded { limit: 0_usize }.fail(),
+            500 => InternalServerError.fail(),
+            502 => BadGateway.fail(),
+            503 => ServiceUnavailable {
+                region
+            }
+                .fail(),
+            504 => GatewayTimeout.fail(),
+            _ => Ok(()),
+        }
+    }
 }
 
 #[cfg(test)]
