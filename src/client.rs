@@ -2,7 +2,7 @@ use crate::constants::{LanguageCode, Region};
 use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
-use futures::future::ok;
+use futures::future::{ok, Either};
 use futures::{Future, Stream};
 use hyper::client::connect::dns::GaiResolver;
 use hyper::{
@@ -16,27 +16,20 @@ use snafu::ResultExt;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Debug;
-
-type Client = HttpClient<HttpsConnector<HttpConnector<GaiResolver>>, Body>;
+use crate::types::Client;
+use std::str;
+use std::sync::{Arc, Mutex};
+use crate::utils::{construct_hyper_client, get_deserialized_or_add_raw, LEAGUE_CACHE};
 
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
 pub struct LeagueClient {
-    client: Client,
+    client: Arc<Client>,
     api_key: String,
     region: Region,
     base_url: String,
     pub ddragon: Option<DDragonClient>,
-    cache: HashMap<Uri, String>,
     default_request: Request<()>
-}
-
-fn construct_hyper_client() -> Client {
-    let mut https = HttpsConnector::new(4).unwrap();
-    https.https_only(true);
-    let cli = HttpClient::builder()
-        .build::<_, Body>(https);
-    cli
 }
 
 impl LeagueClient {
@@ -49,18 +42,17 @@ impl LeagueClient {
         let default_request = Request::builder()
             .header("X-Riot-Token", HeaderValue::from_str(&api_key).unwrap()).body(()).unwrap();
         Ok(LeagueClient {
-            client,
+            client: Arc::new(client),
             api_key,
             region,
             base_url,
             ddragon: None,
-            cache: HashMap::new(),
             default_request
         })
     }
 
     pub fn ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
-        let ddragon = DDragonClient::new(language).context(ReqwestError {})?;
+        let ddragon = DDragonClient::new(language)?;
         Ok(LeagueClient {
             ddragon: Some(ddragon),
             ..self
@@ -69,16 +61,16 @@ impl LeagueClient {
 
     pub fn get_summoner_by_name(&mut self, name: &str) -> impl Future<Item = Summoner, Error = ClientError> {
         trace!("Getting summoner with name: {}", &name);
-        let url: Url = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
+        let url: Uri = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
             .parse().unwrap();
         debug!("Constructed url: {:?}", &url);
-        self.get_deserialized_or_add_raw(url)
+        get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     pub fn get_champion_info(&mut self) -> impl Future<Item = ChampionInfo, Error = ClientError> {
-        let url: Url = format!("{}/platform/v3/champion-rotations", self.base_url)
+        let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse().unwrap();
-        self.get_deserialized_or_add_raw(url)
+        get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     pub fn get_champion_masteries(
@@ -86,12 +78,12 @@ impl LeagueClient {
         summoner_id: &str,
     ) -> impl Future<Item = Vec<ChampionMastery>, Error = ClientError> {
         trace!("Getting champion masteries for id: {}", &summoner_id);
-        let url: Url = format!(
+        let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
             self.base_url, summoner_id
         )
         .parse().unwrap();
-        self.get_deserialized_or_add_raw(url)
+        get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     pub fn get_champion_mastery_by_id(
@@ -99,12 +91,12 @@ impl LeagueClient {
         summoner_id: &str,
         champion_id: u64,
     ) -> impl Future<Item = ChampionMastery, Error = ClientError> {
-        let url: Url = format!(
+        let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
             self.base_url, summoner_id, champion_id
         )
         .parse().unwrap();
-        self.get_deserialized_or_add_raw(url)
+        get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     pub fn get_total_mastery_score(&mut self, summoner_id: &str) -> impl Future<Item = i32, Error = ClientError> {
@@ -113,36 +105,7 @@ impl LeagueClient {
             self.base_url, summoner_id
         )
         .parse().unwrap();
-        self.get_deserialized_or_add_raw(url)
-    }
-
-    fn get_deserialized_or_add_raw<T>(
-        &mut self,
-        url: Uri,
-    ) -> impl Future<Item = T, Error = ClientError>
-    where
-        T: Debug + DeserializeOwned,
-    {
-        match self.cache.get(&url) {
-            Some(resp) => {
-                let returnee: T = serde_json::from_str(resp).unwrap();
-                ok(returnee)
-            }
-            None => self
-                .client
-                .get(url.clone())
-                .and_then(|resp| {
-                    let body = resp.into_body();
-                    body.concat2()
-                })
-                .map(|body| {
-                    let string_response = String::from(body.into_bytes());
-                    self.cache.insert(url.clone(), string_response);
-                    let returnee: T = serde_json::from_str(self.cache.get(&url).unwrap())
-                        .expect("Could not parse");
-                    returnee
-                }),
-        }
+        get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     #[cfg(test)]
@@ -152,9 +115,12 @@ impl LeagueClient {
 
     #[cfg(test)]
     pub(crate) fn print_cache(&self) {
-        println!("cache: {:#?}", self.cache.keys().collect::<Vec<_>>())
+        let cache = self.cache.lock().unwrap();
+        println!("cache: {:#?}", cache.keys().collect::<Vec<_>>())
     }
 }
+
+
 
 impl Default for LeagueClient {
     fn default() -> LeagueClient {

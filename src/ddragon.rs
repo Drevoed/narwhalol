@@ -1,79 +1,59 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
-use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use crate::error::ClientError;
+use crate::types::Client;
+use crate::utils::{get_deserialized_or_add_raw, construct_hyper_client, DDRAGON_CACHE};
+use hyper::Uri;
+use std::sync::{Arc, Mutex};
+use futures::Future;
 
 #[derive(Debug)]
 pub struct DDragonClient {
     version: String,
-    client: Client,
+    client: Arc<Client>,
     base_url: String,
-    cache: HashMap<Url, String>,
+    cache: Arc<Mutex<HashMap<Uri, String>>>,
 }
 
 impl DDragonClient {
-    pub fn new(language: LanguageCode) -> Result<DDragonClient, reqwest::Error> {
-        let client = Client::new();
-        let mut versions: Vec<String> = client
+    pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
+        let client = construct_hyper_client();
+        /*let mut versions: Vec<String> = client
             .get("https://ddragon.leagueoflegends.com/api/versions.json")
             .send()?
-            .json()?;
-        let version = versions.remove(0);
-        drop(versions);
+            .json()?;*/
+        let version = "9.15.1";
         let base_url = format!(
             "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
-            &version, &language
+            version, &language
         );
         let cache = HashMap::new();
         let ddragon = DDragonClient {
-            version,
-            client,
+            version: version.into(),
+            client: Arc::new(client),
             base_url,
-            cache,
+            cache: Arc::new(Mutex::new(cache)),
         };
         Ok(ddragon)
     }
 
-    pub fn get_champions(&mut self) -> Result<AllChampions, reqwest::Error> {
-        let url: Url = format!("{}/champion.json", &self.base_url).parse().unwrap();
-        self.get_deserialized_or_add_raw::<AllChampions>(url)
+    pub fn get_champions(&mut self) -> impl Future<Item = AllChampions, Error = ClientError> {
+        let url: Uri = format!("{}/champion.json", &self.base_url).parse().unwrap();
+        get_deserialized_or_add_raw(self.client.clone(), DDRAGON_CACHE.clone(), url)
     }
 
-    pub fn get_champion(&mut self, name: &str) -> Result<ChampionFullData, reqwest::Error> {
-        let url: Url = format!("{}/champion/{}.json", &self.base_url, name)
+    pub fn get_champion(&mut self, name: &str) -> impl Future<Item = ChampionFullData, Error = ClientError> {
+        let name = name.to_owned();
+        let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        let mut ext = self
-            .get_deserialized_or_add_raw::<ChampionExtended>(url)
-            .unwrap();
-        let champ = ext.data.remove(name).unwrap();
-        Ok(champ)
-    }
-
-    fn get_deserialized_or_add_raw<T>(&mut self, url: Url) -> Result<T, reqwest::Error>
-    where
-        T: Debug + DeserializeOwned,
-    {
-        match self.cache.get(&url) {
-            Some(resp) => {
-                let returnee: T = serde_json::from_str(resp).unwrap();
-                Ok(returnee)
-            }
-            None => {
-                let response: String = self.client.get(url.clone()).send()?.text()?;
-                self.cache.insert(url.clone(), response);
-                let returnee =
-                    serde_json::from_str(self.cache.get(&url).unwrap()).expect("Could not parse");
-                Ok(returnee)
-            }
-        }
-    }
-
-    #[cfg(test)]
-    pub(crate) fn print_cache(&self) {
-        println!("cache: {:#?}", self.cache.keys().collect::<Vec<_>>())
+        get_deserialized_or_add_raw::<ChampionExtended>(self.client.clone(), DDRAGON_CACHE.clone(), url)
+            .map(move |mut ext| {
+                ext.data.remove(&name).unwrap()
+            })
     }
 }
 
@@ -99,6 +79,5 @@ mod tests {
         let mut client = DDRAGON_CLIENT.lock().unwrap();
         let xayah: ChampionFullData = client.get_champion("Xayah").unwrap();
         assert_eq!(xayah.name, "Xayah");
-        client.print_cache()
     }
 }
