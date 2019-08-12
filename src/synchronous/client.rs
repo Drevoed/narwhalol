@@ -38,14 +38,14 @@ impl LeagueAPI {
     pub fn get_summoner_by_name(&self, name: &str) -> ApiResult<Summoner> {
         trace!("Getting summoner with name: {}", &name);
         let url: Url = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
-            .parse().context(UrlNotParsed {})?;
+            .parse().context(ReqwestUrlNotParsed {})?;
         debug!("Constructed url: {:?}", &url);
         Ok(self.get_and_deserialize(url)?)
     }
 
     pub fn get_champion_info(&self) -> ApiResult<ChampionInfo> {
         let url: Url = format!("{}/platform/v3/champion-rotations", self.base_url)
-            .parse().context(UrlNotParsed {})?;
+            .parse().context(ReqwestUrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -55,7 +55,7 @@ impl LeagueAPI {
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse().context(UrlNotParsed {})?;
+        .parse().context(ReqwestUrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -69,7 +69,7 @@ impl LeagueAPI {
             self.base_url, summoner_id, champion_id
         )
         .parse()
-            .context(UrlNotParsed {})?;
+            .context(ReqwestUrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -78,41 +78,20 @@ impl LeagueAPI {
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse().context(UrlNotParsed {})?;
+        .parse().context(ReqwestUrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
     fn get_and_deserialize<T: DeserializeOwned>(&self, url: Url) -> ApiResult<T> {
-        let mut resp = self.client.get(url).send().context(Other {})?;
-        self.check_status(&resp.status())?;
-        let deserialized: T = resp.json().context(Other {})?;
+        let mut resp = self.client.get(url).send().context(ReqwestError {})?;
+        ApiError::check_status(self.region.clone(), resp.status().as_u16())?;
+        let deserialized: T = resp.json().context(ReqwestError {})?;
         Ok(deserialized)
-    }
-
-    fn check_status(&self, code: &StatusCode) -> ApiResult<()> {
-        match code.as_u16() {
-            400 => BadRequest.fail(),
-            401 => Unauthorized.fail(),
-            403 => Forbidden.fail(),
-            404 => DataNotFound.fail(),
-            405 => MethodNotAllowed.fail(),
-            415 => UnsupportedMediaType.fail(),
-            429 => RateLimitExceeded { limit: 0_usize }.fail(),
-            500 => InternalServerError.fail(),
-            502 => BadGateway.fail(),
-            503 => ServiceUnavailable {
-                region: self.region.clone(),
-            }
-            .fail(),
-            504 => GatewayTimeout.fail(),
-            _ => Ok(()),
-        }
     }
 
     #[cfg(test)]
     pub(crate) fn get_status(&self, status: u16) -> ApiResult<()> {
-        let status = StatusCode::from_u16(status).expect("Could not create status code");
-        self.check_status(&status)
+        ApiError::check_status(self.region.clone(), status)
     }
 }
 
