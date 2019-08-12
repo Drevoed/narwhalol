@@ -45,7 +45,7 @@ pub enum ClientError {
 }
 
 impl ClientError {
-    pub fn check_status(region: Region, code: u16) -> ApiResult<()> {
+    pub fn check_status(region: Region, code: u16) -> Result<(), ClientError> {
         match code {
             400 => BadRequest.fail(),
             401 => Unauthorized.fail(),
