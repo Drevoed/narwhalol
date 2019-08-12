@@ -132,7 +132,6 @@ pub struct ChampionSpellData {
     #[serde(rename = "rangeBurn")]
     pub range_burn: String,
     pub image: ChampionImageData,
-    pub resource: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -11,6 +11,7 @@ extern crate reqwest;
 
 #[cfg(feature = "asynchronous")]
 pub mod asynchronous;
+#[cfg_attr(tarpaulin, skip)]
 pub mod constants;
 #[cfg_attr(tarpaulin, skip)]
 pub mod dto;
