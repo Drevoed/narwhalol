@@ -41,6 +41,12 @@ pub enum ApiError {
 
     #[snafu(display("reqwest errored: {}", source))]
     Other { source: reqwest::Error },
+    #[snafu(display("could not parse url: {}", source))]
+    UrlNotParsed { source: reqwest::UrlError }
+}
+
+pub enum DDragonError {
+
 }
 
 #[cfg(test)]
