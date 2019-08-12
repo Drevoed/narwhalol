@@ -38,16 +38,14 @@ impl LeagueAPI {
     pub fn get_summoner_by_name(&self, name: &str) -> ApiResult<Summoner> {
         trace!("Getting summoner with name: {}", &name);
         let url: Url = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
-            .parse()
-            .unwrap();
+            .parse().context(UrlNotParsed {})?;
         debug!("Constructed url: {:?}", &url);
         Ok(self.get_and_deserialize(url)?)
     }
 
     pub fn get_champion_info(&self) -> ApiResult<ChampionInfo> {
         let url: Url = format!("{}/platform/v3/champion-rotations", self.base_url)
-            .parse()
-            .unwrap();
+            .parse().context(UrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -57,8 +55,7 @@ impl LeagueAPI {
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse()
-        .unwrap();
+        .parse().context(UrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -72,7 +69,7 @@ impl LeagueAPI {
             self.base_url, summoner_id, champion_id
         )
         .parse()
-        .unwrap();
+            .context(UrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
@@ -81,8 +78,7 @@ impl LeagueAPI {
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse()
-        .unwrap();
+        .parse().context(UrlNotParsed {})?;
         Ok(self.get_and_deserialize(url)?)
     }
 
