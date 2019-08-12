@@ -65,7 +65,7 @@ impl LeagueAPI {
     pub fn get_champion_mastery_by_id(
         &self,
         summoner_id: &str,
-        champion_id: i64,
+        champion_id: u64,
     ) -> ApiResult<ChampionMastery> {
         let url: Url = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
@@ -114,10 +114,9 @@ impl LeagueAPI {
     }
 
     #[cfg(test)]
-    pub(crate) fn get_status(&self, status: i32) -> ApiResult<()> {
-        let url: Url = format!("https://httpstat.us/{}", status).parse().unwrap();
-        let resp = self.client.get(url).send().context(Other {})?;
-        self.check_status(&resp.status())
+    pub(crate) fn get_status(&self, status: u16) -> ApiResult<()> {
+        let status = StatusCode::from_u16(status).expect("Could not create status code");
+        self.check_status(&status)
     }
 }
 
@@ -132,6 +131,7 @@ mod tests {
     use crate::dto::api::{ChampionMastery, Summoner};
     use crate::error::ApiError;
     use crate::{DDRAGON_CLIENT, LEAGUE_CLIENT};
+    use crate::dto::ddragon::ChampionFullData;
 
     #[test]
     fn gets_summoner_data() {
@@ -163,31 +163,27 @@ mod tests {
         assert_ne!(masteries.len(), 0);
     }
 
-    /*#[test]
+    #[test]
     fn gets_champion_mastery_by_id() {
         let mut ddragon_client = DDRAGON_CLIENT.lock().unwrap();
-        let ahri = ddragon_client.get_champion("LeeSin").unwrap();
+        let lee_sin: ChampionFullData = ddragon_client.get_champion("LeeSin").unwrap();
         let summoner: Summoner = LEAGUE_CLIENT
             .get_summoner_by_name("Santorin")
             .expect("Something went wrong");
         let mastery: ChampionMastery = LEAGUE_CLIENT
             .get_champion_mastery_by_id(
                 &summoner.id,
-                ahri["data"]["LeeSin"]["key"]
-                    .as_str()
-                    .unwrap()
-                    .parse()
-                    .unwrap(),
+                lee_sin.key.parse().unwrap(),
             )
             .expect(&format!(
                 "Could not get champion mastery for champion id {}",
-                ahri["data"]["LeeSin"]["key"].as_str().unwrap()
+                lee_sin.key
             ));
 
         assert_eq!(mastery.champion_id, 64);
         assert_eq!(mastery.champion_level, 7);
         assert!(mastery.champion_points >= 93748)
-    }*/
+    }
 
     #[test]
     fn gets_total_mastery_score() {

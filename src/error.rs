@@ -4,6 +4,15 @@ use snafu::Snafu;
 
 pub type ApiResult<T, E = ApiError> = Result<T, E>;
 
+macro_rules! assert_matches {
+    ($expression:expr, $($pattern:tt)+) => {
+        match $expression {
+            $($pattern)+ => (),
+            ref e => panic!("Assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
+        }
+    };
+}
+
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
 pub enum ApiError {
@@ -35,19 +44,10 @@ pub enum ApiError {
 }
 
 #[cfg(test)]
-mod api_tests {
+mod api_error_tests {
     use super::*;
     use crate::constants::Region;
     use crate::LEAGUE_CLIENT;
-
-    macro_rules! assert_matches {
-    ($expression:expr, $($pattern:tt)+) => {
-        match $expression {
-            $($pattern)+ => (),
-            ref e => panic!("Assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
-        }
-    };
-}
 
     #[test]
     fn returns_correct_status_codes() {

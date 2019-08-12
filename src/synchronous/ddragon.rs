@@ -3,6 +3,7 @@ use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use reqwest::{Client, Url};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct DDragonClient {
@@ -49,10 +50,12 @@ impl DDragonClient {
         Ok(champ)
     }
 
-    fn get_parsed_or_add_raw<T: DeserializeOwned>(
+    fn get_parsed_or_add_raw<T>(
         &mut self,
         url: Url,
-    ) -> Result<T, reqwest::Error> {
+    ) -> Result<T, reqwest::Error>
+    where T: Debug + DeserializeOwned
+    {
         match self.cache.get(&url) {
             Some(resp) => {
                 let returnee: T = serde_json::from_str(resp).unwrap();
@@ -61,7 +64,7 @@ impl DDragonClient {
             None => {
                 let response: String = self.client.get(url.clone()).send()?.text()?;
                 self.cache.insert(url.clone(), response);
-                let returnee = serde_json::from_str(self.cache.get(&url).unwrap()).unwrap();
+                let returnee = serde_json::from_str(self.cache.get(&url).unwrap()).expect("Could not parse");
                 Ok(returnee)
             }
         }
