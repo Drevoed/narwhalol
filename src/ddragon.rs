@@ -3,7 +3,7 @@ use crate::dto::ddragon::{AllChampions, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::Future;
+use futures::{Future, Stream};
 use hyper::Uri;
 
 use std::collections::HashMap;
@@ -20,13 +20,21 @@ pub struct DDragonClient {
 
 impl DDragonClient {
     pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
-        /*let mut versions: Vec<String> = client
-        .get("https://ddragon.leagueoflegends.com/api/versions.json")
-        .send()?
-        .json()?;*/
-        let version = "9.15.1";
+        let mut versions = runtime.block_on(client
+            .get("https://ddragon.leagueoflegends.com/api/versions.json".parse().unwrap())
+            .and_then(|resp| {
+                resp.into_body().concat2()
+            })
+            .map(|chunk| {
+                let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
+                let versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
+                versions
+            })).unwrap();
+        let version = versions.remove(0);
+        drop(versions);
         let base_url = format!(
             "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &language
@@ -75,12 +83,20 @@ impl DDragonClient {
     }
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
     use crate::dto::ddragon::{AllChampions, ChampionFullData};
     use std::time::Instant;
+    use crate::ddragon::DDragonClient;
+    use crate::constants::LanguageCode;
 
     #[test]
+    fn creates_proper_instance() {
+        let cli = DDragonClient::new(LanguageCode::RUSSIA).unwrap();
+        println!("{:?}", &cli)
+    }
+
+    /*#[test]
     fn caches_properly() {
         let mut client = DDRAGON_CLIENT.lock().unwrap();
         let champs = client.get_champions().unwrap();
@@ -96,5 +112,5 @@ mod tests {
         let mut client = DDRAGON_CLIENT.lock().unwrap();
         let xayah: ChampionFullData = client.get_champion("Xayah").unwrap();
         assert_eq!(xayah.name, "Xayah");
-    }
-}*/
+    }*/
+}
