@@ -1,5 +1,5 @@
-use crate::error::ClientError;
-use futures::prelude::*;
+
+
 use hyper::{
     client::connect::dns::GaiResolver, client::HttpConnector, Body, Client as HttpClient, Uri,
 };

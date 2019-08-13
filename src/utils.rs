@@ -1,20 +1,20 @@
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
-use futures::{Async, Future, Stream};
+use futures::{Future, Stream};
 use hyper::header::HeaderValue;
 use hyper::{
-    client::connect::dns::GaiResolver, client::HttpConnector, Body, Client as HttpClient,
-    HeaderMap, Request, Uri,
+    Body, Client as HttpClient,
+    Request, Uri,
 };
 use hyper_tls::HttpsConnector;
-use log::trace;
+
 use serde::de::DeserializeOwned;
-use serde::export::PhantomData;
-use std::collections::HashMap;
+
+
 use std::fmt::Debug;
-use std::sync::{Arc, Mutex};
-use tokio::prelude::*;
+use std::sync::{Arc};
+
 
 pub(crate) fn construct_hyper_client() -> Client {
     let mut https = HttpsConnector::new(4).unwrap();
@@ -44,7 +44,7 @@ pub fn cached_resp<T: Debug + DeserializeOwned>(
         if let Some(api_key) = api_key {
             header = HeaderValue::from_str(api_key).unwrap();
         }
-        let req = Request::builder();
+        let _req = Request::builder();
         let req = Request::builder()
             .header("X-Riot-Token", header)
             .uri(url)

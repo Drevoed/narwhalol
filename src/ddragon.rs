@@ -1,13 +1,13 @@
 use crate::constants::LanguageCode;
-use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
+use crate::dto::ddragon::{AllChampions, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
 use futures::Future;
 use hyper::Uri;
-use serde::de::DeserializeOwned;
+
 use std::collections::HashMap;
-use std::fmt::Debug;
+
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
