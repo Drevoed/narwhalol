@@ -1,5 +1,5 @@
 use crate::constants::LanguageCode;
-use crate::dto::ddragon::{AllChampions, ChampionFullData, ChampionExtended};
+use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
@@ -86,9 +86,7 @@ impl DDragonClient {
             .parse()
             .unwrap();
         cached_resp::<ChampionExtended>(self.client.clone(), self.cache.clone(), url, None)
-            .map(move |mut ext| {
-                ext.data.remove(&name).unwrap()
-            })
+            .map(move |mut ext| ext.data.remove(&name).unwrap())
     }
 }
 

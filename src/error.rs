@@ -68,7 +68,7 @@ impl ClientError {
 #[cfg(test)]
 mod api_error_tests {
     use super::*;
-    use crate::client::LeagueClient;
+    use crate::api::LeagueClient;
     use crate::constants::Region;
 
     #[test]

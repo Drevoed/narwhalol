@@ -9,12 +9,12 @@ extern crate serde_derive;
 #[macro_use]
 extern crate log;
 extern crate hyper;
-pub mod client;
+pub mod api;
 #[cfg_attr(tarpaulin, skip)]
 pub mod constants;
 pub mod ddragon;
 #[cfg_attr(tarpaulin, skip)]
-pub(crate) mod dto;
+pub mod dto;
 pub mod error;
 pub(crate) mod types;
 pub(crate) mod utils;
