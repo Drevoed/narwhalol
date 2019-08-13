@@ -3,18 +3,13 @@ use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
 use futures::{Future, Stream};
 use hyper::header::HeaderValue;
-use hyper::{
-    Body, Client as HttpClient,
-    Request, Uri,
-};
+use hyper::{Body, Client as HttpClient, Request, Uri};
 use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
-
 use std::fmt::Debug;
-use std::sync::{Arc};
-
+use std::sync::Arc;
 
 pub(crate) fn construct_hyper_client() -> Client {
     let mut https = HttpsConnector::new(4).unwrap();

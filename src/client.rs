@@ -5,15 +5,11 @@ use crate::error::*;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
 
-use futures::{Future};
+use futures::Future;
 
-
-use hyper::{
-    HeaderMap, Uri,
-};
+use hyper::{HeaderMap, Uri};
 
 use log::{debug, trace};
-
 
 use std::collections::HashMap;
 use std::env;
@@ -160,15 +156,13 @@ impl Default for LeagueClient {
 mod tests {
     use crate::client::LeagueClient;
     use crate::constants::Region;
-    
-    
-    
+
     use env_logger;
     use futures::future::lazy;
     use futures::Future;
-    
-    use log::debug;
+
     use crate::types::Cache;
+    use log::debug;
 
     #[cfg(test)]
     fn print_cache(cache: Cache) {
@@ -195,14 +189,12 @@ mod tests {
 
     #[test]
     fn lapi_caches_properly() {
-
         tokio::run(lazy(|| {
-            let mut cli = LeagueClient::new(Region::RU)
-                .unwrap();
+            let mut cli = LeagueClient::new(Region::RU).unwrap();
             let cache = cli.cache.clone();
             cli.get_summoner_by_name("Vetro")
                 .and_then(move |_| cli.get_summoner_by_name("Vetro"))
-                .map( |_| print_cache(cache))
+                .map(|_| print_cache(cache))
                 .map_err(|_| ())
         }))
     }
