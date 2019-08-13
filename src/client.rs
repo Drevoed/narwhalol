@@ -3,7 +3,7 @@ use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
-use crate::utils::{construct_hyper_client, CacheFutureSpawner};
+use crate::utils::{construct_hyper_client, cached_resp};
 use futures::future::{ok, Either};
 use futures::{Future, Stream};
 use hyper::client::connect::dns::GaiResolver;
@@ -24,10 +24,12 @@ use std::sync::{Arc, Mutex};
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
 pub struct LeagueClient {
-    spawner: CacheFutureSpawner,
+    client: Client,
+    cache: Cache,
     region: Region,
     base_url: String,
     pub ddragon: Option<DDragonClient>,
+    api_key: String
 }
 
 impl LeagueClient {
@@ -38,17 +40,18 @@ impl LeagueClient {
         let api_key = std::env::var("RIOT_API_KEY")?;
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
-        let spawner = CacheFutureSpawner::new(client, cache, Some(api_key));
         Ok(LeagueClient {
             region,
             base_url,
             ddragon: None,
-            spawner,
+            cache,
+            client,
+            api_key
         })
     }
 
     pub fn ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
-        let ddragon = DDragonClient::new(language)?;
+        let ddragon = DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
         Ok(LeagueClient {
             ddragon: Some(ddragon),
             ..self
@@ -64,14 +67,14 @@ impl LeagueClient {
             .parse()
             .unwrap();
         debug!("Constructed url: {:?}", &url);
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
     }
 
     pub fn get_champion_info(&mut self) -> impl Future<Item = ChampionInfo, Error = ClientError> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
     }
 
     pub fn get_champion_masteries(
@@ -85,7 +88,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
     }
 
     pub fn get_champion_mastery_by_id(
@@ -99,7 +102,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
     }
 
     pub fn get_total_mastery_score(
@@ -112,7 +115,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
     }
 
     #[cfg(test)]
