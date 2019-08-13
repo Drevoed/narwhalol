@@ -2,13 +2,15 @@ use crate::constants::{LanguageCode, Region};
 use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
+use crate::types::Client;
+use crate::utils::construct_hyper_client;
 use futures::future::{ok, Either};
 use futures::{Future, Stream};
 use hyper::client::connect::dns::GaiResolver;
+use hyper::Request;
 use hyper::{
     client::HttpConnector, header::HeaderValue, Body, Client as HttpClient, HeaderMap, Uri,
 };
-use hyper::Request;
 use hyper_tls::HttpsConnector;
 use log::{debug, trace};
 use serde::de::DeserializeOwned;
@@ -16,38 +18,42 @@ use snafu::ResultExt;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Debug;
-use crate::types::Client;
 use std::str;
 use std::sync::{Arc, Mutex};
-use crate::utils::{construct_hyper_client, get_deserialized_or_add_raw, LEAGUE_CACHE};
 
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
-pub struct LeagueClient {
+pub struct LeagueClient<T>
+    where T: Debug + DeserializeOwned
+{
     client: Arc<Client>,
     api_key: String,
     region: Region,
     base_url: String,
-    pub ddragon: Option<DDragonClient>,
-    default_request: Request<()>
+    pub ddragon: Option<DDragonClient<T>>,
+    default_request: Request<()>,
 }
 
-impl LeagueClient {
+impl<T> LeagueClient<T>
+    where T: Debug + DeserializeOwned
+{
     /// Constructor function for LeagueAPI struct, accepts Region type as a parameter
-    pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
+    pub fn new(region: Region) -> Result<LeagueClient<T>, env::VarError> {
         let mut headers = HeaderMap::new();
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
         let api_key = std::env::var("RIOT_API_KEY")?;
         let client = construct_hyper_client();
         let default_request = Request::builder()
-            .header("X-Riot-Token", HeaderValue::from_str(&api_key).unwrap()).body(()).unwrap();
+            .header("X-Riot-Token", HeaderValue::from_str(&api_key).unwrap())
+            .body(())
+            .unwrap();
         Ok(LeagueClient {
             client: Arc::new(client),
             api_key,
             region,
             base_url,
             ddragon: None,
-            default_request
+            default_request,
         })
     }
 
@@ -59,17 +65,22 @@ impl LeagueClient {
         })
     }
 
-    pub fn get_summoner_by_name(&mut self, name: &str) -> impl Future<Item = Summoner, Error = ClientError> {
+    pub fn get_summoner_by_name(
+        &mut self,
+        name: &str,
+    ) -> impl Future<Item = Summoner, Error = ClientError> {
         trace!("Getting summoner with name: {}", &name);
         let url: Uri = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
-            .parse().unwrap();
+            .parse()
+            .unwrap();
         debug!("Constructed url: {:?}", &url);
         get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
     pub fn get_champion_info(&mut self) -> impl Future<Item = ChampionInfo, Error = ClientError> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
-            .parse().unwrap();
+            .parse()
+            .unwrap();
         get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
@@ -82,7 +93,8 @@ impl LeagueClient {
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse().unwrap();
+        .parse()
+        .unwrap();
         get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
@@ -95,16 +107,21 @@ impl LeagueClient {
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
             self.base_url, summoner_id, champion_id
         )
-        .parse().unwrap();
+        .parse()
+        .unwrap();
         get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
-    pub fn get_total_mastery_score(&mut self, summoner_id: &str) -> impl Future<Item = i32, Error = ClientError> {
+    pub fn get_total_mastery_score(
+        &mut self,
+        summoner_id: &str,
+    ) -> impl Future<Item = i32, Error = ClientError> {
         let url: Uri = format!(
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
         )
-        .parse().unwrap();
+        .parse()
+        .unwrap();
         get_deserialized_or_add_raw(self.client.clone(), LEAGUE_CACHE.clone(), url)
     }
 
@@ -120,10 +137,10 @@ impl LeagueClient {
     }
 }
 
-
-
-impl Default for LeagueClient {
-    fn default() -> LeagueClient {
+impl<T> Default for LeagueClient<T>
+    where T: Debug + DeserializeOwned
+{
+    fn default() -> LeagueClient<T> {
         LeagueClient::new(Region::default()).expect("Please provide API_KEY environment variable")
     }
 }

@@ -1,30 +1,35 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
+use crate::error::ClientError;
+use crate::types::{Client, Cache};
+use crate::utils::{construct_hyper_client, CacheFutureSpawner};
+use futures::Future;
+use hyper::Uri;
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use crate::error::ClientError;
-use crate::types::Client;
-use crate::utils::{get_deserialized_or_add_raw, construct_hyper_client, DDRAGON_CACHE};
-use hyper::Uri;
 use std::sync::{Arc, Mutex};
-use futures::Future;
 
 #[derive(Debug)]
-pub struct DDragonClient {
+pub struct DDragonClient<T>
+    where T: Debug + DeserializeOwned
+{
     version: String,
-    client: Arc<Client>,
     base_url: String,
-    cache: Arc<Mutex<HashMap<Uri, String>>>,
+    spawner: CacheFutureSpawner<T>
 }
 
-impl DDragonClient {
-    pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
+impl<T> DDragonClient<T>
+    where T: DeserializeOwned + Debug
+{
+    pub fn new(language: LanguageCode) -> Result<DDragonClient<T>, ClientError> {
         let client = construct_hyper_client();
+        let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
+        let spawner = CacheFutureSpawner::new(client, cache, None);
         /*let mut versions: Vec<String> = client
-            .get("https://ddragon.leagueoflegends.com/api/versions.json")
-            .send()?
-            .json()?;*/
+        .get("https://ddragon.leagueoflegends.com/api/versions.json")
+        .send()?
+        .json()?;*/
         let version = "9.15.1";
         let base_url = format!(
             "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
@@ -33,9 +38,8 @@ impl DDragonClient {
         let cache = HashMap::new();
         let ddragon = DDragonClient {
             version: version.into(),
-            client: Arc::new(client),
             base_url,
-            cache: Arc::new(Mutex::new(cache)),
+            spawner
         };
         Ok(ddragon)
     }
@@ -45,15 +49,20 @@ impl DDragonClient {
         get_deserialized_or_add_raw(self.client.clone(), DDRAGON_CACHE.clone(), url)
     }
 
-    pub fn get_champion(&mut self, name: &str) -> impl Future<Item = ChampionFullData, Error = ClientError> {
+    pub fn get_champion(
+        &mut self,
+        name: &str,
+    ) -> impl Future<Item = ChampionFullData, Error = ClientError> {
         let name = name.to_owned();
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        get_deserialized_or_add_raw::<ChampionExtended>(self.client.clone(), DDRAGON_CACHE.clone(), url)
-            .map(move |mut ext| {
-                ext.data.remove(&name).unwrap()
-            })
+        get_deserialized_or_add_raw::<ChampionExtended>(
+            self.client.clone(),
+            DDRAGON_CACHE.clone(),
+            url,
+        )
+        .map(move |mut ext| ext.data.remove(&name).unwrap())
     }
 }
 

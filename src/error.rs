@@ -41,7 +41,7 @@ pub enum ClientError {
     UrlNotParsed,
 
     #[snafu(display("hyper errored: {}", source))]
-    Other { source: hyper::Error }
+    Other { source: hyper::Error },
 }
 
 impl ClientError {
