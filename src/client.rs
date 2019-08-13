@@ -4,20 +4,20 @@ use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::future::{ok, Either};
-use futures::{Future, Stream};
-use hyper::client::connect::dns::GaiResolver;
-use hyper::Request;
+
+use futures::{Future};
+
+
 use hyper::{
-    client::HttpConnector, header::HeaderValue, Body, Client as HttpClient, HeaderMap, Uri,
+    HeaderMap, Uri,
 };
-use hyper_tls::HttpsConnector;
+
 use log::{debug, trace};
-use serde::de::DeserializeOwned;
-use snafu::ResultExt;
+
+
 use std::collections::HashMap;
 use std::env;
-use std::fmt::Debug;
+
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -35,7 +35,7 @@ pub struct LeagueClient {
 impl LeagueClient {
     /// Constructor function for LeagueAPI struct, accepts Region type as a parameter
     pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
-        let mut headers = HeaderMap::new();
+        let _headers = HeaderMap::new();
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
         let api_key = std::env::var("RIOT_API_KEY")?;
         let client = construct_hyper_client();
@@ -160,13 +160,13 @@ impl Default for LeagueClient {
 mod tests {
     use crate::client::LeagueClient;
     use crate::constants::Region;
-    use crate::dto::api::{ChampionMastery, Summoner};
-    use crate::dto::ddragon::ChampionFullData;
-    use crate::error::ClientError;
+    
+    
+    
     use env_logger;
     use futures::future::lazy;
     use futures::Future;
-    use std::time::Instant;
+    
     use log::debug;
     use crate::types::Cache;
 

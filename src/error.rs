@@ -1,15 +1,17 @@
+//!
+
 use crate::constants::Region;
 
 use snafu::Snafu;
 
-macro_rules! assert_matches {
+/*macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
         match $expression {
             $($pattern)+ => (),
             ref e => panic!("Assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
         }
     };
-}
+}*/
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
