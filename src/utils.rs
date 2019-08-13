@@ -8,6 +8,7 @@ use hyper::{
     Uri,
 };
 use hyper_tls::HttpsConnector;
+use log::trace;
 use serde::de::DeserializeOwned;
 use serde::export::PhantomData;
 use std::collections::HashMap;
@@ -15,15 +16,14 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 use tokio::prelude::*;
 
-#[derive(Debug)]
+/*#[derive(Debug)]
 pub struct CacheFutureSpawner {
     client: Client,
     cache: Cache,
     api_key: Option<String>,
 }
 
-impl CacheFutureSpawner
-{
+impl CacheFutureSpawner {
     pub fn new(client: Client, cache: Cache, api_key: Option<String>) -> Self {
         CacheFutureSpawner {
             client,
@@ -48,12 +48,27 @@ impl CacheFutureSpawner {
     }
 }
 
-pub struct CacheFuture<T> {
+pub struct CacheFuture<T>
+where
+    T: Debug + DeserializeOwned,
+{
     client: Client,
     cache: Cache,
     url: Uri,
     api_key: Option<String>,
+    state: CacheFutureState<T>,
     _phantom: PhantomData<T>,
+}
+
+enum CacheFutureState<T>
+where
+    T: Debug + DeserializeOwned,
+{
+    ResolvingEndpoint,
+    ResolvingCache(Request<Body>),
+    Cached(String),
+    NotCached(Request<Body>),
+    Result(T),
 }
 
 impl<T> CacheFuture<T>
@@ -66,6 +81,7 @@ where
             cache,
             url,
             api_key,
+            state: CacheFutureState::ResolvingEndpoint,
             _phantom: PhantomData,
         }
     }
@@ -79,29 +95,72 @@ where
     type Error = ClientError;
 
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        use self::CacheFutureState::*;
         let cache = self.cache.lock().unwrap();
+        let client = self.client.clone();
+        loop {
+            match self.state {
+                ResolvingEndpoint => {
+                    let req = match &self.api_key {
+                        //Riot api request
+                        Some(api_key) => {
+                            trace!("got api key: {}", api_key);
+                            Request::builder()
+                                .header("X-Riot-Token", HeaderValue::from_str(api_key).unwrap())
+                                .uri(self.url.clone())
+                                .body(Body::from(""))
+                                .unwrap()
+                        }
+                        //DDragon request
+                        None => Request::builder().uri(self.url.clone()).body(Body::from("")).unwrap(),
+                    };
+                    self.state = ResolvingCache(req)
+                }
+                ResolvingCache(ref req) => match cache.get(req.uri()) {
+                    Some(resp) => {
+                        self.state = Cached(resp.to_owned());
+                    }
+                    None => self.state = NotCached(req),
+                },
+                Cached(ref resp) => {
+                    let deserialized: T = serde_json::from_str(&resp).unwrap();
+                    self.state = Result(deserialized)
+                }
+                NotCached(ref req) => match client.request(req).poll() {
+                    Ok(Async::Ready(resp)) => {
+                        let body = resp.into_body();
+                        match body.concat2().poll() {
+                            Ok(Async::Ready(chunk)) => {
+                                let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
+                                let deserialized: T = serde_json::from_str(&string_resp).unwrap();
+                                self.state = Result(deserialized);
+                            }
+                            Ok(Async::NotReady) => return Ok(Async::NotReady),
+                            Err(e) => return Err(ClientError::Other { source: e }),
+                        }
+                    }
+                    Ok(Async::NotReady) => return Ok(Async::NotReady),
+                    Err(e) => return Err(ClientError::Other { source: e }),
+                },
+                Result(ref res) => return Ok(Async::Ready(res.to_owned())),
+            }
+        }
+
+        /*let cache = self.cache.lock().unwrap();
         let url = self.url.clone();
         let url2 = url.clone();
         let req = match &self.api_key {
             //Riot api request
             Some(api_key) => {
-                dbg!("got api key: {}", api_key);
+                trace!("got api key: {}", api_key);
                 Request::builder()
-                    .header(
-                        "X-Riot-Token",
-                        HeaderValue::from_str(api_key).unwrap(),
-                    )
+                    .header("X-Riot-Token", HeaderValue::from_str(api_key).unwrap())
                     .uri(url)
                     .body(Body::from(""))
                     .unwrap()
             }
             //DDragon request
-            None => {
-                Request::builder()
-                    .uri(url)
-                    .body(Body::from(""))
-                    .unwrap()
-            }
+            None => Request::builder().uri(url).body(Body::from("")).unwrap(),
         };
         match cache.get(&url2) {
             Some(resp) => {
@@ -109,35 +168,47 @@ where
                 return Ok(Async::Ready(deserialized));
             }
             None => {
-                dbg!("got no cache");
-                dbg!("beginning poll");
-                match self.client.request(req).poll() {
+                trace!("got no cache");
+                trace!("beginning poll");
+                let mut req_fut = self.client.request(req);
+                match req_fut.poll() {
                     Ok(Async::Ready(resp)) => {
-                        dbg!("ready");
+                        trace!("hyper request returned ready");
                         let body = resp.into_body();
                         match body.concat2().poll() {
                             Ok(Async::Ready(chunk)) => {
-                                dbg!("ready");
+                                trace!("concat2 returned ready");
                                 let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
                                 let deserialized: T = serde_json::from_str(&string_resp).unwrap();
                                 return Ok(Async::Ready(deserialized));
                             }
-                            Ok(Async::NotReady) => {dbg!("not ready"); return Ok(Async::NotReady)},
-                            Err(e) => {dbg!(&e); return Err(ClientError::Other { source: e })},
+                            Ok(Async::NotReady) => {
+                                trace!("concat2 return not ready");
+                                return Ok(Async::NotReady);
+                            }
+                            Err(e) => {
+                                dbg!(&e);
+                                return Err(ClientError::Other { source: e });
+                            }
                         }
                     }
-                    Ok(Async::NotReady) => {dbg!("not ready"); return Ok(Async::NotReady)},
-                    Err(e) => {dbg!(&e); return Err(ClientError::Other { source: e })},
+                    Ok(Async::NotReady) => {
+                        trace!("hyper request returned not ready");
+                        return Ok(Async::NotReady);
+                    }
+                    Err(e) => {
+                        dbg!(&e);
+                        return Err(ClientError::Other { source: e });
+                    }
                 }
-                },
-        }
+            }
+        }*/
     }
-}
+}*/
 
 pub(crate) fn construct_hyper_client() -> Client {
-    /*let mut https = HttpsConnector::new(4).unwrap();
+    let mut https = HttpsConnector::new(4).unwrap();
     https.https_only(true);
     let cli = HttpClient::builder().build::<_, Body>(https);
-    Arc::new(cli)*/
-    Arc::new(hyper::Client::new())
+    Arc::new(cli)
 }

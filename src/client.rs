@@ -2,7 +2,7 @@ use crate::constants::{LanguageCode, Region};
 use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
-use crate::types::{Client, Cache};
+use crate::types::{Cache, Client};
 use crate::utils::{construct_hyper_client, CacheFutureSpawner};
 use futures::future::{ok, Either};
 use futures::{Future, Stream};
@@ -23,20 +23,18 @@ use std::sync::{Arc, Mutex};
 
 /// Main type for calling League API Endpoints.
 #[derive(Debug)]
-pub struct LeagueClient
-{
+pub struct LeagueClient {
     spawner: CacheFutureSpawner,
     region: Region,
     base_url: String,
     pub ddragon: Option<DDragonClient>,
 }
 
-impl LeagueClient
-{
+impl LeagueClient {
     /// Constructor function for LeagueAPI struct, accepts Region type as a parameter
     pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
         let mut headers = HeaderMap::new();
-        let base_url = format!("http://{}.api.riotgames.com/lol", region.as_platform_str());
+        let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
         let api_key = std::env::var("RIOT_API_KEY")?;
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
@@ -45,7 +43,7 @@ impl LeagueClient
             region,
             base_url,
             ddragon: None,
-            spawner
+            spawner,
         })
     }
 
@@ -123,8 +121,7 @@ impl LeagueClient
     }
 }
 
-impl Default for LeagueClient
-{
+impl Default for LeagueClient {
     fn default() -> LeagueClient {
         LeagueClient::new(Region::default()).expect("Please provide API_KEY environment variable")
     }
@@ -132,14 +129,14 @@ impl Default for LeagueClient
 
 #[cfg(test)]
 mod tests {
+    use crate::client::LeagueClient;
+    use crate::constants::Region;
     use crate::dto::api::{ChampionMastery, Summoner};
     use crate::dto::ddragon::ChampionFullData;
     use crate::error::ClientError;
-    use crate::client::LeagueClient;
-    use crate::constants::Region;
-    use futures::Future;
-    use futures::future::lazy;
     use env_logger;
+    use futures::future::lazy;
+    use futures::Future;
 
     #[test]
     fn gets_summoner_data() {
@@ -156,8 +153,7 @@ mod tests {
                     )
                 })
                 .map_err(|cli_err| println!("{}", cli_err))
-        })
-        )
+        }))
     }
 
     /*#[test]
