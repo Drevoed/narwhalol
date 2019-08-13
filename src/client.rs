@@ -3,7 +3,7 @@ use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
-use crate::utils::{construct_hyper_client, cached_resp};
+use crate::utils::{cached_resp, construct_hyper_client};
 use futures::future::{ok, Either};
 use futures::{Future, Stream};
 use hyper::client::connect::dns::GaiResolver;
@@ -29,7 +29,7 @@ pub struct LeagueClient {
     region: Region,
     base_url: String,
     pub ddragon: Option<DDragonClient>,
-    api_key: String
+    api_key: String,
 }
 
 impl LeagueClient {
@@ -46,12 +46,13 @@ impl LeagueClient {
             ddragon: None,
             cache,
             client,
-            api_key
+            api_key,
         })
     }
 
     pub fn ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
-        let ddragon = DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
+        let ddragon =
+            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
         Ok(LeagueClient {
             ddragon: Some(ddragon),
             ..self
@@ -67,14 +68,24 @@ impl LeagueClient {
             .parse()
             .unwrap();
         debug!("Constructed url: {:?}", &url);
-        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
     }
 
     pub fn get_champion_info(&mut self) -> impl Future<Item = ChampionInfo, Error = ClientError> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
     }
 
     pub fn get_champion_masteries(
@@ -88,7 +99,12 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
     }
 
     pub fn get_champion_mastery_by_id(
@@ -102,7 +118,12 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
     }
 
     pub fn get_total_mastery_score(
@@ -115,7 +136,12 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, Some(&self.api_key))
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
     }
 
     #[cfg(test)]
@@ -140,6 +166,14 @@ mod tests {
     use env_logger;
     use futures::future::lazy;
     use futures::Future;
+    use std::time::Instant;
+    use log::debug;
+    use crate::types::Cache;
+
+    #[cfg(test)]
+    fn print_cache(cache: Cache) {
+        debug!("{:?}", cache.lock().unwrap().keys().collect::<Vec<_>>())
+    }
 
     #[test]
     fn gets_summoner_data() {
@@ -156,6 +190,20 @@ mod tests {
                     )
                 })
                 .map_err(|cli_err| println!("{}", cli_err))
+        }))
+    }
+
+    #[test]
+    fn lapi_caches_properly() {
+
+        tokio::run(lazy(|| {
+            let mut cli = LeagueClient::new(Region::RU)
+                .unwrap();
+            let cache = cli.cache.clone();
+            cli.get_summoner_by_name("Vetro")
+                .and_then(move |_| cli.get_summoner_by_name("Vetro"))
+                .map( |_| print_cache(cache))
+                .map_err(|_| ())
         }))
     }
 

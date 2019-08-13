@@ -2,7 +2,7 @@ use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
-use crate::utils::{construct_hyper_client, cached_resp};
+use crate::utils::{cached_resp, construct_hyper_client};
 use futures::Future;
 use hyper::Uri;
 use serde::de::DeserializeOwned;
@@ -35,12 +35,16 @@ impl DDragonClient {
             version: version.into(),
             base_url,
             client,
-            cache
+            cache,
         };
         Ok(ddragon)
     }
 
-    pub(crate) fn new_for_lapi(client: Client, cache: Cache, lang: LanguageCode) -> Result<DDragonClient, ClientError> {
+    pub(crate) fn new_for_lapi(
+        client: Client,
+        cache: Cache,
+        lang: LanguageCode,
+    ) -> Result<DDragonClient, ClientError> {
         let version = "9.15.1";
         let base_url = format!(
             "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
@@ -50,7 +54,7 @@ impl DDragonClient {
             version: version.into(),
             client,
             cache,
-            base_url
+            base_url,
         })
     }
 
