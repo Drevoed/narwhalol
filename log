@@ -1,0 +1,7 @@
+
+running 5 tests
+test constants::ranked_queue::tests::ranked_queue_properly_converts_to_str_ref ... ok
+test constants::lang_code::tests::lang_code_returns_correct_lang_string ... ok
+test constants::ranked_queue::tests::solo_is_ranked_flex ... ok
+test constants::region::tests::region_gets_correct_platform_string ... ok
+Getting summoner with name: Santorin

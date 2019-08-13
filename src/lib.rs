@@ -26,4 +26,3 @@ pub mod utils;
 use constants::{LanguageCode, Region};
 use std::sync::Mutex;
 use {client::LeagueClient, ddragon::DDragonClient};
-

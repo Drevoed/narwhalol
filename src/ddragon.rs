@@ -1,7 +1,7 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
-use crate::types::{Client, Cache};
+use crate::types::{Cache, Client};
 use crate::utils::{construct_hyper_client, CacheFutureSpawner};
 use futures::Future;
 use hyper::Uri;
@@ -11,15 +11,13 @@ use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
-pub struct DDragonClient
-{
+pub struct DDragonClient {
     version: String,
     base_url: String,
-    spawner: CacheFutureSpawner
+    spawner: CacheFutureSpawner,
 }
 
-impl DDragonClient
-{
+impl DDragonClient {
     pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
@@ -36,7 +34,7 @@ impl DDragonClient
         let ddragon = DDragonClient {
             version: version.into(),
             base_url,
-            spawner
+            spawner,
         };
         Ok(ddragon)
     }
@@ -54,8 +52,9 @@ impl DDragonClient
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        self.spawner.spawn_cache_fut::<ChampionExtended>(url)
-        .map(move |mut ext| ext.data.remove(&name).unwrap())
+        self.spawner
+            .spawn_cache_fut::<ChampionExtended>(url)
+            .map(move |mut ext| ext.data.remove(&name).unwrap())
     }
 }
 
