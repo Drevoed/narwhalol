@@ -2,7 +2,7 @@ use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
-use crate::utils::{construct_hyper_client, CacheFutureSpawner};
+use crate::utils::{construct_hyper_client, cached_resp};
 use futures::Future;
 use hyper::Uri;
 use serde::de::DeserializeOwned;
@@ -12,16 +12,16 @@ use std::sync::{Arc, Mutex};
 
 #[derive(Debug)]
 pub struct DDragonClient {
+    client: Client,
+    cache: Cache,
     version: String,
     base_url: String,
-    spawner: CacheFutureSpawner,
 }
 
 impl DDragonClient {
     pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
-        let spawner = CacheFutureSpawner::new(client, cache, None);
         /*let mut versions: Vec<String> = client
         .get("https://ddragon.leagueoflegends.com/api/versions.json")
         .send()?
@@ -34,14 +34,29 @@ impl DDragonClient {
         let ddragon = DDragonClient {
             version: version.into(),
             base_url,
-            spawner,
+            client,
+            cache
         };
         Ok(ddragon)
     }
 
+    pub(crate) fn new_for_lapi(client: Client, cache: Cache, lang: LanguageCode) -> Result<DDragonClient, ClientError> {
+        let version = "9.15.1";
+        let base_url = format!(
+            "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
+            version, &lang
+        );
+        Ok(DDragonClient {
+            version: version.into(),
+            client,
+            cache,
+            base_url
+        })
+    }
+
     pub fn get_champions(&mut self) -> impl Future<Item = AllChampions, Error = ClientError> {
         let url: Uri = format!("{}/champion.json", &self.base_url).parse().unwrap();
-        self.spawner.spawn_cache_fut(url)
+        cached_resp(self.client.clone(), self.cache.clone(), url, None)
     }
 
     pub fn get_champion(
@@ -52,9 +67,7 @@ impl DDragonClient {
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        self.spawner
-            .spawn_cache_fut::<ChampionExtended>(url)
-            .map(move |mut ext| ext.data.remove(&name).unwrap())
+        cached_resp(self.client.clone(), self.cache.clone(), url, None)
     }
 }
 
