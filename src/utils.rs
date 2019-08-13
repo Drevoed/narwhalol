@@ -3,7 +3,10 @@ use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
 use futures::{Async, Future, Stream};
 use hyper::header::HeaderValue;
-use hyper::{client::connect::dns::GaiResolver, client::HttpConnector, Body, Client as HttpClient, Request, Uri, HeaderMap};
+use hyper::{
+    client::connect::dns::GaiResolver, client::HttpConnector, Body, Client as HttpClient,
+    HeaderMap, Request, Uri,
+};
 use hyper_tls::HttpsConnector;
 use log::trace;
 use serde::de::DeserializeOwned;
@@ -20,7 +23,12 @@ pub(crate) fn construct_hyper_client() -> Client {
     Arc::new(cli)
 }
 
-pub fn cached_resp<T: Debug + DeserializeOwned>(client: Client, cache: Cache, url: Uri, api_key: Option<&str>) -> impl Future<Item = T, Error = ClientError> {
+pub fn cached_resp<T: Debug + DeserializeOwned>(
+    client: Client,
+    cache: Cache,
+    url: Uri,
+    api_key: Option<&str>,
+) -> impl Future<Item = T, Error = ClientError> {
     let maybe_resp: Option<T> = cache
         .lock()
         .unwrap()
@@ -28,6 +36,7 @@ pub fn cached_resp<T: Debug + DeserializeOwned>(client: Client, cache: Cache, ur
         .map(|res| serde_json::from_str(res).unwrap());
 
     if let Some(resp) = maybe_resp {
+        debug!("Found cached: {:?}", resp);
         Either::A(ok(resp))
     } else {
         let url2 = url.clone();
@@ -42,17 +51,19 @@ pub fn cached_resp<T: Debug + DeserializeOwned>(client: Client, cache: Cache, ur
             .body(Body::from(""))
             .unwrap();
         let do_request = client.request(req);
-        Either::B(do_request
-            .and_then(|resp| {
-                let body = resp.into_body();
-                body.concat2()
-            })
-            .map(move |chunk| {
-                let string_response = String::from_utf8(chunk.to_vec()).unwrap();
-                let deserialized: T = serde_json::from_str(&string_response).unwrap();
-                cache.lock().unwrap().insert(url2, string_response);
-                deserialized
-            })
-            .map_err(|e| ClientError::Other {source: e}))
+        Either::B(
+            do_request
+                .and_then(|resp| {
+                    let body = resp.into_body();
+                    body.concat2()
+                })
+                .map(move |chunk| {
+                    let string_response = String::from_utf8(chunk.to_vec()).unwrap();
+                    let deserialized: T = serde_json::from_str(&string_response).unwrap();
+                    cache.lock().unwrap().insert(url2, string_response);
+                    deserialized
+                })
+                .map_err(|e| ClientError::Other { source: e }),
+        )
     }
 }
