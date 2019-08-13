@@ -18,7 +18,7 @@ pub(crate) fn construct_hyper_client() -> Client {
     Arc::new(cli)
 }
 
-pub fn cached_resp<T: Debug + DeserializeOwned>(
+pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
     client: Client,
     cache: Cache,
     url: Uri,

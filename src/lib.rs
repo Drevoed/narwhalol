@@ -14,7 +14,7 @@ pub mod client;
 pub mod constants;
 pub mod ddragon;
 #[cfg_attr(tarpaulin, skip)]
-pub mod dto;
+pub(crate) mod dto;
 pub mod error;
-pub mod types;
-pub mod utils;
+pub(crate) mod types;
+pub(crate) mod utils;
