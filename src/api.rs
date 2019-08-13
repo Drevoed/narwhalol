@@ -151,7 +151,7 @@ impl LeagueClient {
     }
 
     #[cfg(test)]
-    pub(crate) fn get_status(&self, status: u16) -> Result<(), ClientError> {
+    pub(crate) fn get_status(&self, status: u16) -> impl Future<Item = (), Error = ClientError> {
         ClientError::check_status(self.region.clone(), status)
     }
 }

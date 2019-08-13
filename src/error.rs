@@ -3,6 +3,8 @@
 use crate::constants::Region;
 
 use snafu::Snafu;
+use futures::Future;
+use futures::future::{ok, err};
 
 macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
@@ -47,20 +49,21 @@ pub enum ClientError {
 }
 
 impl ClientError {
-    pub fn check_status(region: Region, code: u16) -> Result<(), ClientError> {
+    pub fn check_status(region: Region, code: u16) -> impl Future<Item = (), Error = ClientError> {
+        use self::ClientError::*;
         match code {
-            400 => BadRequest.fail(),
-            401 => Unauthorized.fail(),
-            403 => Forbidden.fail(),
-            404 => DataNotFound.fail(),
-            405 => MethodNotAllowed.fail(),
-            415 => UnsupportedMediaType.fail(),
-            429 => RateLimitExceeded { limit: 0_usize }.fail(),
-            500 => InternalServerError.fail(),
-            502 => BadGateway.fail(),
-            503 => ServiceUnavailable { region }.fail(),
-            504 => GatewayTimeout.fail(),
-            _ => Ok(()),
+            400 => err(BadRequest),
+            401 => err(Unauthorized),
+            403 => err(Forbidden),
+            404 => err(DataNotFound),
+            405 => err(MethodNotAllowed),
+            415 => err(UnsupportedMediaType),
+            429 => err(RateLimitExceeded { limit: 0_usize }),
+            500 => err(InternalServerError),
+            502 => err(BadGateway),
+            503 => err(ServiceUnavailable { region }),
+            504 => err(GatewayTimeout),
+            _ => ok(()),
         }
     }
 }
@@ -73,18 +76,19 @@ mod api_error_tests {
 
     #[test]
     fn returns_correct_status_codes() {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let lapi = LeagueClient::new(Region::NA).unwrap();
-        let bad_r_err = lapi.get_status(400).unwrap_err();
-        let unauthorized_err = lapi.get_status(401).unwrap_err();
-        let forbidden_err = lapi.get_status(403).unwrap_err();
-        let not_found_err = lapi.get_status(404).unwrap_err();
-        let method_not_allowed_err = lapi.get_status(405).unwrap_err();
-        let unsupported_media_err = lapi.get_status(415).unwrap_err();
-        let rate_err = lapi.get_status(429).unwrap_err();
-        let internal_err = lapi.get_status(500).unwrap_err();
-        let bad_g_err = lapi.get_status(502).unwrap_err();
-        let service_err = lapi.get_status(503).unwrap_err();
-        let gateway_t_err = lapi.get_status(504).unwrap_err();
+        let bad_r_err = runtime.block_on(lapi.get_status(400)).unwrap_err();
+        let unauthorized_err = runtime.block_on(lapi.get_status(401)).unwrap_err();
+        let forbidden_err = runtime.block_on(lapi.get_status(403)).unwrap_err();
+        let not_found_err = runtime.block_on(lapi.get_status(404)).unwrap_err();
+        let method_not_allowed_err = runtime.block_on(lapi.get_status(405)).unwrap_err();
+        let unsupported_media_err = runtime.block_on(lapi.get_status(415)).unwrap_err();
+        let rate_err = runtime.block_on(lapi.get_status(429)).unwrap_err();
+        let internal_err = runtime.block_on(lapi.get_status(500)).unwrap_err();
+        let bad_g_err = runtime.block_on(lapi.get_status(502)).unwrap_err();
+        let service_err = runtime.block_on(lapi.get_status(503)).unwrap_err();
+        let gateway_t_err = runtime.block_on(lapi.get_status(504)).unwrap_err();
         assert_matches!(bad_r_err, ClientError::BadRequest);
         assert_matches!(unauthorized_err, ClientError::Unauthorized);
         assert_matches!(forbidden_err, ClientError::Forbidden);
