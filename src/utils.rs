@@ -1,57 +1,128 @@
-use crate::types::Client;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use hyper::{Client as HttpClient, client::connect::dns::GaiResolver, client::HttpConnector, Uri, Body};
-use hyper_tls::HttpsConnector;
-use futures::{Future, Stream};
 use crate::error::ClientError;
+use crate::types::{Cache, Client};
+use futures::future::{ok, Either};
+use futures::{Async, Future, Stream};
+use hyper::header::HeaderValue;
+use hyper::{
+    client::connect::dns::GaiResolver, client::HttpConnector, Body, Client as HttpClient, Request,
+    Uri,
+};
+use hyper_tls::HttpsConnector;
 use serde::de::DeserializeOwned;
+use serde::export::PhantomData;
+use std::collections::HashMap;
 use std::fmt::Debug;
-use futures::future::{Either, ok};
+use std::sync::{Arc, Mutex};
 
-type Cache<'a, K = Uri, V = String> = Arc<Mutex<HashMap<K, V>>>;
-
-lazy_static!{
-    pub(crate) static ref DDRAGON_CACHE: Cache<'static> = Arc::new(Mutex::new(HashMap::new()));
-    pub(crate) static ref LEAGUE_CACHE: Cache<'static> = Arc::new(Mutex::new(HashMap::new()));
+#[derive(Debug)]
+pub struct CacheFutureSpawner<T> {
+    client: Client,
+    cache: Cache,
+    api_key: Option<String>,
+    _phantom: PhantomData<T>,
 }
 
-pub(crate) fn get_deserialized_or_add_raw<T>(
-    client: Arc<Client>,
-    cache: Cache<'static>,
-    url: Uri,
-) -> impl Future<Item = T, Error = ClientError>
-    where
-        T: Debug + DeserializeOwned,
+impl<T> CacheFutureSpawner<T>
+where
+    T: Debug + DeserializeOwned,
 {
-    let mut cache = cache.lock().unwrap();
-    match cache.get(&url) {
-        Some(resp) => {
-            let returnee: T = serde_json::from_str(resp).unwrap();
-            Either::A(ok(returnee))
+    pub fn new(client: Client, cache: Cache, api_key: Option<String>) -> Self {
+        CacheFutureSpawner {
+            client,
+            cache,
+            api_key,
+            _phantom: PhantomData,
         }
-        None => Either::B(client
-            .get(url.clone())
-            .and_then(move |resp| {
-                let body = resp.into_body();
-                body.concat2()
-            })
-            .map(move |chunk| {
-                let v = chunk.to_vec();
-                let string_response = String::from_utf8(v).unwrap();
-                cache.insert(url.clone(), string_response);
-                let returnee: T = serde_json::from_str(cache.get(&url).unwrap())
-                    .expect("Could not parse");
-                returnee
-            })
-            .map_err(|e| {ClientError::Other {source: e}})),
+    }
+
+    pub fn spawn_cache_fut(&self, url: Uri) -> CacheFuture<T> {
+        let cli_clone = self.client.clone();
+        let cache_clone = self.cache.clone();
+        let api_key_clone = self.api_key.clone();
+        CacheFuture::new(cli_clone, cache_clone, url, api_key_clone)
+    }
+}
+
+pub struct CacheFuture<T> {
+    client: Client,
+    cache: Cache,
+    url: Uri,
+    api_key: Option<String>,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> CacheFuture<T>
+where
+    T: Debug + DeserializeOwned,
+{
+    pub fn new(client: Client, cache: Cache, url: Uri, api_key: Option<String>) -> Self {
+        CacheFuture {
+            client,
+            cache,
+            url,
+            api_key,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> Future for CacheFuture<T>
+where
+    T: Debug + DeserializeOwned,
+{
+    type Item = T;
+    type Error = ClientError;
+
+    fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
+        let cache = self.cache.lock().unwrap();
+        let url = self.url.clone();
+        let req = match &self.api_key {
+            //Riot api request
+            Some(api_key) => {
+                Request::builder()
+                    .header(
+                        "X-Riot-Token",
+                        HeaderValue::from_str(api_key).unwrap(),
+                    )
+                    .uri(self.url)
+                    .body(Body::from(""))
+                    .unwrap()
+            }
+            None => {
+                Request::builder()
+                    .uri(self.url)
+                    .body(Body::from(""))
+                    .unwrap()
+            }
+        };
+        match cache.get(&url) {
+            Some(resp) => {
+                let deserialized: T = serde_json::from_str(resp).unwrap();
+                return Ok(Async::Ready(deserialized));
+            }
+            None => match self.client.request(req).poll() {
+                Ok(Async::Ready(resp)) => {
+                    let body = resp.into_body();
+                    match body.concat2().poll() {
+                        Ok(Async::Ready(chunk)) => {
+                            let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
+                            let deserialized: T = serde_json::from_str(&string_resp).unwrap();
+                            return Ok(Async::Ready(deserialized));
+                        }
+                        Ok(Async::NotReady) => return Ok(Async::NotReady),
+                        Err(e) => return Err(ClientError::Other { source: e }),
+                    }
+                }
+                Ok(Async::NotReady) => return Ok(Async::NotReady),
+                Err(e) => return Err(ClientError::Other { source: e }),
+            },
+        }
     }
 }
 
 pub(crate) fn construct_hyper_client() -> Client {
     let mut https = HttpsConnector::new(4).unwrap();
     https.https_only(true);
-    let cli = HttpClient::builder()
-        .build::<_, Body>(https);
-    cli
+    let cli = HttpClient::builder().build::<_, Body>(https);
+    Arc::new(cli)
 }
