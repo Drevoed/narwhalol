@@ -164,7 +164,7 @@ impl Default for LeagueClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::client::LeagueClient;
+    use super::LeagueClient;
     use crate::constants::{LanguageCode, Region};
 
     use env_logger;
@@ -262,11 +262,11 @@ mod tests {
     fn gets_total_mastery_score() {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let mut lapi = LeagueClient::new(Region::default()).unwrap();
-        let summoner: Summoner = runtime.block_on(lapi
-            .get_summoner_by_name("Santorin"))
+        let summoner: Summoner = runtime
+            .block_on(lapi.get_summoner_by_name("Santorin"))
             .unwrap();
-        let score = runtime.block_on(lapi
-            .get_total_mastery_score(&summoner.id))
+        let score = runtime
+            .block_on(lapi.get_total_mastery_score(&summoner.id))
             .unwrap();
         assert!(score >= 192)
     }
