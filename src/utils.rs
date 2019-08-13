@@ -23,8 +23,6 @@ pub struct CacheFutureSpawner<T> {
 }
 
 impl<T> CacheFutureSpawner<T>
-where
-    T: Debug + DeserializeOwned,
 {
     pub fn new(client: Client, cache: Cache, api_key: Option<String>) -> Self {
         CacheFutureSpawner {
@@ -34,8 +32,10 @@ where
             _phantom: PhantomData,
         }
     }
+}
 
-    pub fn spawn_cache_fut(&self, url: Uri) -> CacheFuture<T> {
+impl<T> CacheFutureSpawner<T> {
+    pub fn spawn_cache_fut<B: Debug + DeserializeOwned>(&self, url: Uri) -> CacheFuture<B> {
         let cli_clone = self.client.clone();
         let cache_clone = self.cache.clone();
         let api_key_clone = self.api_key.clone();
@@ -76,6 +76,7 @@ where
     fn poll(&mut self) -> Result<Async<Self::Item>, Self::Error> {
         let cache = self.cache.lock().unwrap();
         let url = self.url.clone();
+        let url2 = url.clone();
         let req = match &self.api_key {
             //Riot api request
             Some(api_key) => {
@@ -84,18 +85,19 @@ where
                         "X-Riot-Token",
                         HeaderValue::from_str(api_key).unwrap(),
                     )
-                    .uri(self.url)
+                    .uri(url)
                     .body(Body::from(""))
                     .unwrap()
             }
+            //DDragon request
             None => {
                 Request::builder()
-                    .uri(self.url)
+                    .uri(url)
                     .body(Body::from(""))
                     .unwrap()
             }
         };
-        match cache.get(&url) {
+        match cache.get(&url2) {
             Some(resp) => {
                 let deserialized: T = serde_json::from_str(resp).unwrap();
                 return Ok(Async::Ready(deserialized));

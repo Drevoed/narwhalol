@@ -35,7 +35,6 @@ impl<T> DDragonClient<T>
             "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &language
         );
-        let cache = HashMap::new();
         let ddragon = DDragonClient {
             version: version.into(),
             base_url,
@@ -46,7 +45,7 @@ impl<T> DDragonClient<T>
 
     pub fn get_champions(&mut self) -> impl Future<Item = AllChampions, Error = ClientError> {
         let url: Uri = format!("{}/champion.json", &self.base_url).parse().unwrap();
-        get_deserialized_or_add_raw(self.client.clone(), DDRAGON_CACHE.clone(), url)
+        self.spawner.spawn_cache_fut(url)
     }
 
     pub fn get_champion(
@@ -57,11 +56,7 @@ impl<T> DDragonClient<T>
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        get_deserialized_or_add_raw::<ChampionExtended>(
-            self.client.clone(),
-            DDRAGON_CACHE.clone(),
-            url,
-        )
+        self.spawner.spawn_cache_fut::<ChampionExtended>(url)
         .map(move |mut ext| ext.data.remove(&name).unwrap())
     }
 }
