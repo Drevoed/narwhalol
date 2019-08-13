@@ -7,5 +7,5 @@ use hyper_tls::HttpsConnector;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub(crate) type Client = Arc<HttpClient<HttpsConnector<HttpConnector<GaiResolver>>, Body>>;
+pub(crate) type Client = Arc<HttpClient<HttpConnector<GaiResolver>, Body>>;
 pub(crate) type Cache<K = Uri, V = String> = Arc<Mutex<HashMap<K, V>>>;

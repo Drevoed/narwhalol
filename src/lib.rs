@@ -27,10 +27,3 @@ use constants::{LanguageCode, Region};
 use std::sync::Mutex;
 use {client::LeagueClient, ddragon::DDragonClient};
 
-#[cfg(test)]
-lazy_static! {
-    pub(crate) static ref DDRAGON_CLIENT: Mutex<DDragonClient> =
-        Mutex::new(DDragonClient::new(LanguageCode::UNITED_STATES).unwrap());
-    pub(crate) static ref LEAGUE_CLIENT: LeagueClient =
-        LeagueClient::new(Region::NA).expect("Please provide API_KEY environment variable");
-}
