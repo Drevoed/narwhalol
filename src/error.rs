@@ -4,14 +4,14 @@ use crate::constants::Region;
 
 use snafu::Snafu;
 
-/*macro_rules! assert_matches {
+macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
         match $expression {
             $($pattern)+ => (),
             ref e => panic!("Assertion failed: `{:?}` does not match `{}`", e, stringify!($($pattern)+))
         }
     };
-}*/
+}
 
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub(crate)))]
@@ -65,25 +65,26 @@ impl ClientError {
     }
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod api_error_tests {
     use super::*;
     use crate::constants::Region;
-    use crate::LEAGUE_CLIENT;
+    use crate::client::LeagueClient;
 
     #[test]
     fn returns_correct_status_codes() {
-        let bad_r_err = LEAGUE_CLIENT.get_status(400).unwrap_err();
-        let unauthorized_err = LEAGUE_CLIENT.get_status(401).unwrap_err();
-        let forbidden_err = LEAGUE_CLIENT.get_status(403).unwrap_err();
-        let not_found_err = LEAGUE_CLIENT.get_status(404).unwrap_err();
-        let method_not_allowed_err = LEAGUE_CLIENT.get_status(405).unwrap_err();
-        let unsupported_media_err = LEAGUE_CLIENT.get_status(415).unwrap_err();
-        let rate_err = LEAGUE_CLIENT.get_status(429).unwrap_err();
-        let internal_err = LEAGUE_CLIENT.get_status(500).unwrap_err();
-        let bad_g_err = LEAGUE_CLIENT.get_status(502).unwrap_err();
-        let service_err = LEAGUE_CLIENT.get_status(503).unwrap_err();
-        let gateway_t_err = LEAGUE_CLIENT.get_status(504).unwrap_err();
+        let lapi = LeagueClient::new(Region::NA).unwrap();
+        let bad_r_err = lapi.get_status(400).unwrap_err();
+        let unauthorized_err = lapi.get_status(401).unwrap_err();
+        let forbidden_err = lapi.get_status(403).unwrap_err();
+        let not_found_err = lapi.get_status(404).unwrap_err();
+        let method_not_allowed_err = lapi.get_status(405).unwrap_err();
+        let unsupported_media_err = lapi.get_status(415).unwrap_err();
+        let rate_err = lapi.get_status(429).unwrap_err();
+        let internal_err = lapi.get_status(500).unwrap_err();
+        let bad_g_err = lapi.get_status(502).unwrap_err();
+        let service_err = lapi.get_status(503).unwrap_err();
+        let gateway_t_err = lapi.get_status(504).unwrap_err();
         assert_matches!(bad_r_err, ClientError::BadRequest);
         assert_matches!(unauthorized_err, ClientError::Unauthorized);
         assert_matches!(forbidden_err, ClientError::Forbidden);
@@ -99,4 +100,4 @@ mod api_error_tests {
         );
         assert_matches!(gateway_t_err, ClientError::GatewayTimeout)
     }
-}*/
+}
