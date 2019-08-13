@@ -29,3 +29,5 @@ hyper-tls = "0.3.2"
 log = "0.4.8"
 snafu = { version = "0.4", features = ["futures-01"]}
 futures = "0.1.28"
+tokio = "0.1.22"
+env_logger = "0.6.2"
