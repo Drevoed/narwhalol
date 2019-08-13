@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct AllChampions {
     #[serde(rename = "type")]
     pub data_type: String,
@@ -9,7 +9,7 @@ pub struct AllChampions {
     pub data: HashMap<String, ChampionData>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionExtended {
     #[serde(rename = "type")]
     pub type_field: String,
@@ -18,7 +18,7 @@ pub struct ChampionExtended {
     pub data: HashMap<String, ChampionFullData>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionData {
     pub version: String,
     pub id: String,
@@ -33,7 +33,7 @@ pub struct ChampionData {
     pub stats: ChampionStatsData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionInfoData {
     pub attack: i32,
     pub defense: i32,
@@ -41,7 +41,7 @@ pub struct ChampionInfoData {
     pub difficulty: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionImageData {
     pub full: String,
     pub sprite: String,
@@ -52,7 +52,7 @@ pub struct ChampionImageData {
     pub h: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionStatsData {
     pub hp: f64,
     pub hpperlevel: f64,
@@ -76,7 +76,7 @@ pub struct ChampionStatsData {
     pub attackspeed: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionFullData {
     pub id: String,
     pub key: String,
@@ -97,7 +97,7 @@ pub struct ChampionFullData {
     pub recommended: Vec<ChampionRecommendedData>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionSkinData {
     pub id: String,
     pub num: i32,
@@ -105,7 +105,7 @@ pub struct ChampionSkinData {
     pub chromas: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionSpellData {
     pub id: String,
     pub name: String,
@@ -133,20 +133,20 @@ pub struct ChampionSpellData {
     pub image: ChampionImageData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionSpellLevelTipData {
     pub label: Vec<String>,
     pub effect: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionPassiveData {
     pub name: String,
     pub description: String,
     pub image: ChampionImageData,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionRecommendedData {
     pub champion: String,
     pub title: String,
@@ -160,7 +160,7 @@ pub struct ChampionRecommendedData {
     #[serde(rename = "extensionPage")]
     pub extension_page: Option<bool>,
     #[serde(rename = "customPanel")]
-    pub custom_panel: serde_json::Value,
+    pub custom_panel: Option<serde_json::Value>,
     pub blocks: Vec<ChampionBlockData>,
     #[serde(rename = "requiredPerk")]
     pub required_perk: Option<String>,
@@ -169,10 +169,10 @@ pub struct ChampionRecommendedData {
     pub priority: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionDataValues {}
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionBlockData {
     #[serde(rename = "type")]
     pub type_field: String,
@@ -199,7 +199,7 @@ pub struct ChampionBlockData {
     pub items: Vec<ChampionItemData>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionItemData {
     pub id: String,
     pub count: i64,

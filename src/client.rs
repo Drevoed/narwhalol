@@ -46,13 +46,23 @@ impl LeagueClient {
         })
     }
 
-    pub fn ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
+    pub fn with_ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
         let ddragon =
             DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
         Ok(LeagueClient {
             ddragon: Some(ddragon),
             ..self
         })
+    }
+
+    pub fn ddragon(&mut self) -> &mut DDragonClient {
+        match self.ddragon {
+            Some(ref mut dd) => dd,
+            None => panic!(
+                "You are trying to access ddragon client without creating an embedded one in LeagueClient!\n\
+                See with_ddragon method in League Client.\
+                ")
+        }
     }
 
     pub fn get_summoner_by_name(
@@ -155,17 +165,18 @@ impl Default for LeagueClient {
 #[cfg(test)]
 mod tests {
     use crate::client::LeagueClient;
-    use crate::constants::{Region, LanguageCode};
+    use crate::constants::{LanguageCode, Region};
 
     use env_logger;
     use futures::future::lazy;
     use futures::Future;
 
+    use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
+    use crate::dto::ddragon::ChampionFullData;
+    use crate::error::ClientError;
     use crate::types::Cache;
     use log::debug;
-    use crate::error::ClientError;
-    use crate::dto::ddragon::ChampionFullData;
-    use crate::dto::api::{Summoner, ChampionMastery, ChampionInfo};
+    use std::time::Instant;
 
     #[cfg(test)]
     fn print_cache(cache: Cache) {
@@ -174,31 +185,31 @@ mod tests {
 
     #[test]
     fn gets_summoner_data() {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         env_logger::init();
-        tokio::run(lazy(|| {
-            LeagueClient::new(Region::NA)
-                .unwrap()
-                .get_summoner_by_name("Santorin")
-                .map(|sum| {
-                    assert_eq!(
-                        &sum.account_id,
-                        "rPnj4h5W6OhejxB-AO3hLOQctgZcckqV_82N_8_WuCFdO2A"
-                    )
-                })
-                .map_err(|cli_err| println!("{}", cli_err))
-        }))
+        let sum: Summoner = runtime
+            .block_on(
+                LeagueClient::new(Region::NA)
+                    .unwrap()
+                    .get_summoner_by_name("Santorin"),
+            )
+            .unwrap();
+        assert_eq!(
+            &sum.account_id,
+            "rPnj4h5W6OhejxB-AO3hLOQctgZcckqV_82N_8_WuCFdO2A"
+        )
     }
 
     #[test]
     fn lapi_caches_properly() {
-        tokio::run(lazy(|| {
-            let mut cli = LeagueClient::new(Region::RU).unwrap();
-            let cache = cli.cache.clone();
-            cli.get_summoner_by_name("Vetro")
-                .and_then(move |_| cli.get_summoner_by_name("Vetro"))
-                .map(|_| print_cache(cache))
-                .map_err(|_| ())
-        }))
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+        let mut cli = LeagueClient::new(Region::RU).unwrap();
+        let cache = cli.cache.clone();
+        let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
+        let now = Instant::now();
+        let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
+        assert_eq!(now.elapsed().as_millis(), 0);
+        print_cache(cache);
     }
 
     #[test]
@@ -215,30 +226,32 @@ mod tests {
     fn gets_champion_masteries() {
         let mut lapi = LeagueClient::new(Region::NA).unwrap();
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
-        let masteries: Vec<ChampionMastery> = runtime.block_on(lapi
-            .get_summoner_by_name("Santorin")
-            .and_then(move |summoner| {
-                lapi.get_champion_masteries(&summoner.id)
-            })).unwrap();
+        let masteries: Vec<ChampionMastery> = runtime
+            .block_on(
+                lapi.get_summoner_by_name("Santorin")
+                    .and_then(move |summoner| lapi.get_champion_masteries(&summoner.id)),
+            )
+            .unwrap();
         assert_ne!(masteries.len(), 0)
     }
 
-    /*#[test]
+    #[test]
     fn gets_champion_mastery_by_id() {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let mut lapi = LeagueClient::new(Region::default())
             .unwrap()
-            .ddragon(LanguageCode::UNITED_STATES)
+            .with_ddragon(LanguageCode::UNITED_STATES)
             .unwrap();
-        let lee_sin: ChampionFullData = ddragon_client.get_champion("LeeSin").unwrap();
-        let summoner: Summoner = lapi
-            .get_summoner_by_name("Santorin")
-            .expect("Something went wrong");
-        let mastery: ChampionMastery = lapi
-            .get_champion_mastery_by_id(&summoner.id, lee_sin.key.parse().unwrap())
-            .expect(&format!(
-                "Could not get champion mastery for champion id {}",
-                lee_sin.key
-            ));
+        let mut ddragon_client = lapi.ddragon();
+        let lee_sin: ChampionFullData = runtime
+            .block_on(ddragon_client.get_champion("LeeSin"))
+            .unwrap();
+        let summoner: Summoner = runtime
+            .block_on(lapi.get_summoner_by_name("Santorin"))
+            .unwrap();
+        let mastery: ChampionMastery = runtime
+            .block_on(lapi.get_champion_mastery_by_id(&summoner.id, lee_sin.key.parse().unwrap()))
+            .unwrap();
 
         assert_eq!(mastery.champion_id, 64);
         assert_eq!(mastery.champion_level, 7);
@@ -247,13 +260,14 @@ mod tests {
 
     #[test]
     fn gets_total_mastery_score() {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let mut lapi = LeagueClient::new(Region::default()).unwrap();
-        let summoner: Summoner = lapi
-            .get_summoner_by_name("Santorin")
-            .expect("Something went wrong");
-        let score = lapi
-            .get_total_mastery_score(&summoner.id)
-            .expect("Could not get total mastery score");
+        let summoner: Summoner = runtime.block_on(lapi
+            .get_summoner_by_name("Santorin"))
+            .unwrap();
+        let score = runtime.block_on(lapi
+            .get_total_mastery_score(&summoner.id))
+            .unwrap();
         assert!(score >= 192)
-    }*/
+    }
 }

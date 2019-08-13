@@ -1,5 +1,5 @@
 use crate::constants::LanguageCode;
-use crate::dto::ddragon::{AllChampions, ChampionFullData};
+use crate::dto::ddragon::{AllChampions, ChampionFullData, ChampionExtended};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
@@ -23,20 +23,26 @@ impl DDragonClient {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
-        let mut versions = runtime.block_on(client
-            .get("https://ddragon.leagueoflegends.com/api/versions.json".parse().unwrap())
-            .and_then(|resp| {
-                resp.into_body().concat2()
-            })
-            .map(|chunk| {
-                let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
-                let versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
-                versions
-            })).unwrap();
+        let mut versions = runtime
+            .block_on(
+                client
+                    .get(
+                        "https://ddragon.leagueoflegends.com/api/versions.json"
+                            .parse()
+                            .unwrap(),
+                    )
+                    .and_then(|resp| resp.into_body().concat2())
+                    .map(|chunk| {
+                        let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
+                        let versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
+                        versions
+                    }),
+            )
+            .unwrap();
         let version = versions.remove(0);
         drop(versions);
         let base_url = format!(
-            "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
+            "https://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &language
         );
         let ddragon = DDragonClient {
@@ -55,7 +61,7 @@ impl DDragonClient {
     ) -> Result<DDragonClient, ClientError> {
         let version = "9.15.1";
         let base_url = format!(
-            "http://ddragon.leagueoflegends.com/cdn/{}/data/{}",
+            "https://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &lang
         );
         Ok(DDragonClient {
@@ -79,16 +85,19 @@ impl DDragonClient {
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, None)
+        cached_resp::<ChampionExtended>(self.client.clone(), self.cache.clone(), url, None)
+            .map(move |mut ext| {
+                ext.data.remove(&name).unwrap()
+            })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::constants::LanguageCode;
+    use crate::ddragon::DDragonClient;
     use crate::dto::ddragon::{AllChampions, ChampionFullData};
     use std::time::Instant;
-    use crate::ddragon::DDragonClient;
-    use crate::constants::LanguageCode;
 
     #[test]
     fn creates_proper_instance() {
@@ -96,21 +105,11 @@ mod tests {
         println!("{:?}", &cli)
     }
 
-    /*#[test]
-    fn caches_properly() {
-        let mut client = DDRAGON_CLIENT.lock().unwrap();
-        let champs = client.get_champions().unwrap();
-        drop(champs);
-        let now = Instant::now();
-        let champs: AllChampions = client.get_champions();
-        assert!(now.elapsed().as_millis() < 100);
-        assert_eq!("103", &champs.data.get("Ahri").unwrap().key);
-    }
-
     #[test]
     fn gets_full_champion_data() {
-        let mut client = DDRAGON_CLIENT.lock().unwrap();
-        let xayah: ChampionFullData = client.get_champion("Xayah").unwrap();
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+        let mut client = DDragonClient::new(LanguageCode::UNITED_STATES).unwrap();
+        let xayah: ChampionFullData = runtime.block_on(client.get_champion("Xayah")).unwrap();
         assert_eq!(xayah.name, "Xayah");
-    }*/
+    }
 }
