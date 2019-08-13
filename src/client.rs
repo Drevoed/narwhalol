@@ -155,7 +155,7 @@ impl Default for LeagueClient {
 #[cfg(test)]
 mod tests {
     use crate::client::LeagueClient;
-    use crate::constants::Region;
+    use crate::constants::{Region, LanguageCode};
 
     use env_logger;
     use futures::future::lazy;
@@ -163,6 +163,9 @@ mod tests {
 
     use crate::types::Cache;
     use log::debug;
+    use crate::error::ClientError;
+    use crate::dto::ddragon::ChampionFullData;
+    use crate::dto::api::{Summoner, ChampionMastery, ChampionInfo};
 
     #[cfg(test)]
     fn print_cache(cache: Cache) {
@@ -177,7 +180,6 @@ mod tests {
                 .unwrap()
                 .get_summoner_by_name("Santorin")
                 .map(|sum| {
-                    println!("{:?}", &sum);
                     assert_eq!(
                         &sum.account_id,
                         "rPnj4h5W6OhejxB-AO3hLOQctgZcckqV_82N_8_WuCFdO2A"
@@ -199,33 +201,39 @@ mod tests {
         }))
     }
 
-    /*#[test]
-    fn gets_champion_info() -> Result<(), ClientError> {
-        let champ_info = LEAGUE_CLIENT.get_champion_info()?;
+    #[test]
+    fn gets_champion_info() {
+        let mut lapi = LeagueClient::new(Region::default()).unwrap();
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+        let champ_info = runtime.block_on(lapi.get_champion_info()).unwrap();
         assert!(champ_info.free_champion_ids.len() > 10);
         assert!(champ_info.free_champion_ids_for_new_players.len() > 0);
-        Ok(assert_ne!(champ_info.max_new_player_level, 0))
+        assert_ne!(champ_info.max_new_player_level, 0)
     }
 
     #[test]
     fn gets_champion_masteries() {
-        let summoner: Summoner = LEAGUE_CLIENT
+        let mut lapi = LeagueClient::new(Region::NA).unwrap();
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+        let masteries: Vec<ChampionMastery> = runtime.block_on(lapi
             .get_summoner_by_name("Santorin")
-            .expect("Something went wrong");
-        let masteries: Vec<ChampionMastery> = LEAGUE_CLIENT
-            .get_champion_masteries(&summoner.id)
-            .expect("Could not get champion masteries");
-        assert_ne!(masteries.len(), 0);
+            .and_then(move |summoner| {
+                lapi.get_champion_masteries(&summoner.id)
+            })).unwrap();
+        assert_ne!(masteries.len(), 0)
     }
 
-    #[test]
+    /*#[test]
     fn gets_champion_mastery_by_id() {
-        let mut ddragon_client = DDRAGON_CLIENT.lock().unwrap();
+        let mut lapi = LeagueClient::new(Region::default())
+            .unwrap()
+            .ddragon(LanguageCode::UNITED_STATES)
+            .unwrap();
         let lee_sin: ChampionFullData = ddragon_client.get_champion("LeeSin").unwrap();
-        let summoner: Summoner = LEAGUE_CLIENT
+        let summoner: Summoner = lapi
             .get_summoner_by_name("Santorin")
             .expect("Something went wrong");
-        let mastery: ChampionMastery = LEAGUE_CLIENT
+        let mastery: ChampionMastery = lapi
             .get_champion_mastery_by_id(&summoner.id, lee_sin.key.parse().unwrap())
             .expect(&format!(
                 "Could not get champion mastery for champion id {}",
@@ -239,10 +247,11 @@ mod tests {
 
     #[test]
     fn gets_total_mastery_score() {
-        let summoner: Summoner = LEAGUE_CLIENT
+        let mut lapi = LeagueClient::new(Region::default()).unwrap();
+        let summoner: Summoner = lapi
             .get_summoner_by_name("Santorin")
             .expect("Something went wrong");
-        let score = LEAGUE_CLIENT
+        let score = lapi
             .get_total_mastery_score(&summoner.id)
             .expect("Could not get total mastery score");
         assert!(score >= 192)
