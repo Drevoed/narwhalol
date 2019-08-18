@@ -1,15 +1,17 @@
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
-use futures::{Future, Stream};
+use futures::prelude::*;
+use futures::{TryFutureExt, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use hyper::header::HeaderValue;
-use hyper::{Body, Client as HttpClient, Request, Uri};
+use hyper::{Body, Client as HttpClient, Request, Uri, Response};
 use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
 use std::fmt::Debug;
 use std::sync::Arc;
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
 
 pub(crate) fn construct_hyper_client() -> Client {
     let mut https = HttpsConnector::new(4).unwrap();
@@ -23,7 +25,7 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
     cache: Cache,
     url: Uri,
     api_key: Option<&str>,
-) -> impl Future<Item = T, Error = ClientError> {
+) -> impl Future<Output = Result<T, ClientError>> {
     let maybe_resp: Option<T> = cache
         .lock()
         .unwrap()
@@ -32,7 +34,7 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
 
     if let Some(resp) = maybe_resp {
         debug!("Found cached: {:?}", resp);
-        Either::A(ok(resp))
+        Either::Left(ok(resp))
     } else {
         let url2 = url.clone();
         let mut header = HeaderValue::from_str("").unwrap();
@@ -46,13 +48,13 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
             .body(Body::from(""))
             .unwrap();
         let do_request = client.request(req);
-        Either::B(
+        Either::Right(
             do_request
-                .and_then(|resp| {
+                .and_then(|resp: Response<Body>| {
                     let body = resp.into_body();
-                    body.concat2()
+                    body.try_concat()
                 })
-                .map(move |chunk| {
+                .map_ok(move |chunk| {
                     let string_response = String::from_utf8(chunk.to_vec()).unwrap();
                     let deserialized: T = serde_json::from_str(&string_response).unwrap();
                     cache.lock().unwrap().insert(url2, string_response);
