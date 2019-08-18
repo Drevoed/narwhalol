@@ -4,8 +4,7 @@ use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-
-use futures::Future;
+use futures::{TryFutureExt, FutureExt, Future};
 
 use hyper::{HeaderMap, Uri};
 
@@ -68,7 +67,7 @@ impl LeagueClient {
     pub fn get_summoner_by_name(
         &mut self,
         name: &str,
-    ) -> impl Future<Item = Summoner, Error = ClientError> {
+    ) -> impl Future<Output = Result<Summoner, ClientError>> {
         println!("Getting summoner with name: {}", &name);
         let url: Uri = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
             .parse()
@@ -82,7 +81,7 @@ impl LeagueClient {
         )
     }
 
-    pub fn get_champion_info(&mut self) -> impl Future<Item = ChampionInfo, Error = ClientError> {
+    pub fn get_champion_info(&mut self) -> impl Future<Output = Result<ChampionInfo, ClientError>> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
@@ -97,7 +96,7 @@ impl LeagueClient {
     pub fn get_champion_masteries(
         &mut self,
         summoner_id: &str,
-    ) -> impl Future<Item = Vec<ChampionMastery>, Error = ClientError> {
+    ) -> impl Future<Output = Result<Vec<ChampionMastery>, ClientError>> {
         trace!("Getting champion masteries for id: {}", &summoner_id);
         let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
@@ -117,7 +116,7 @@ impl LeagueClient {
         &mut self,
         summoner_id: &str,
         champion_id: u64,
-    ) -> impl Future<Item = ChampionMastery, Error = ClientError> {
+    ) -> impl Future<Output = Result<ChampionMastery, ClientError>> {
         let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
             self.base_url, summoner_id, champion_id
@@ -135,7 +134,7 @@ impl LeagueClient {
     pub fn get_total_mastery_score(
         &mut self,
         summoner_id: &str,
-    ) -> impl Future<Item = i32, Error = ClientError> {
+    ) -> impl Future<Output = Result<i32, ClientError>> {
         let url: Uri = format!(
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
@@ -151,7 +150,7 @@ impl LeagueClient {
     }
 
     #[cfg(test)]
-    pub(crate) fn get_status(&self, status: u16) -> impl Future<Item = (), Error = ClientError> {
+    pub(crate) fn get_status(&self, status: u16) -> impl Future<Output = Result<(), ClientError>> {
         ClientError::check_status(self.region.clone(), status)
     }
 }
@@ -168,8 +167,8 @@ mod tests {
     use crate::constants::{LanguageCode, Region};
 
     use env_logger;
-    use futures::future::lazy;
-    use futures::Future;
+    use futures::prelude::*;
+    use futures::{Future, TryFutureExt, FutureExt};
 
     use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
     use crate::dto::ddragon::ChampionFullData;
@@ -208,7 +207,7 @@ mod tests {
         let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
         let now = Instant::now();
         let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
-        assert_eq!(now.elapsed().as_millis(), 0);
+        assert!(now.elapsed().as_millis() <= 2);
         print_cache(cache);
     }
 
