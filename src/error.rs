@@ -69,7 +69,7 @@ pub enum ClientError {
     NoToken { source: std::env::VarError },
     /// This error is returned when the user provides malformed token
     #[snafu(display("Provided token {} is not correct riot api token", token))]
-    WrongToken { token: String }
+    WrongToken { token: String },
 }
 
 impl ClientError {

@@ -53,11 +53,7 @@ impl DDragonClient {
         }
     }
 
-    pub(crate) fn new_for_lapi(
-        client: Client,
-        cache: Cache,
-        lang: LanguageCode,
-    ) -> DDragonClient {
+    pub(crate) fn new_for_lapi(client: Client, cache: Cache, lang: LanguageCode) -> DDragonClient {
         let version = "9.15.1";
         let base_url = format!(
             "https://ddragon.leagueoflegends.com/cdn/{}/data/{}",

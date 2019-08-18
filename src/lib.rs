@@ -26,6 +26,6 @@ pub(crate) mod utils;
 pub use {
     api::LeagueClient,
     constants::{LanguageCode, RankedQueue, Region},
+    dto::api::*,
     dto::ddragon::*,
-    dto::api::*
 };
