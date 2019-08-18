@@ -64,6 +64,12 @@ pub enum ClientError {
     /// Hyper error
     #[snafu(display("hyper errored: {}", source))]
     Other { source: hyper::Error },
+    /// This error is returned when the user provides no token
+    #[snafu(display("Please provide the correct token variable as it is {}", source))]
+    NoToken { source: std::env::VarError },
+    /// This error is returned when the user provides malformed token
+    #[snafu(display("Provided token {} is not correct riot api token", token))]
+    WrongToken { token: String }
 }
 
 impl ClientError {

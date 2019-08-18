@@ -1,4 +1,4 @@
-#![doc(html_root_url = "https://docs.rs/tokio/0.1.22")]
+#![doc(html_root_url = "https://docs.rs/narwhalol/0.1.2")]
 //#![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 

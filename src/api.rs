@@ -1,5 +1,9 @@
 //! Easy to use async riot api wrapper.
 //!
+//! # Introduction
+//! This module contains all the things needed to talk with Riot API.
+//! The most important type here is
+//! [`LeagueClient`], as it is the main way of getting the data from API. See [`LeagueClient`] for more information.
 
 use crate::constants::{LanguageCode, Region};
 use crate::ddragon::DDragonClient;
@@ -10,6 +14,7 @@ use crate::utils::{cached_resp, construct_hyper_client};
 
 use futures::Future;
 
+use snafu::ResultExt;
 use hyper::{HeaderMap, Uri};
 
 use log::{debug, trace};
@@ -44,10 +49,13 @@ pub struct LeagueClient {
 
 impl LeagueClient {
     /// Constructor function for LeagueAPI struct, accepts type as a parameter
-    pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
-        let _headers = HeaderMap::new();
+    ///
+    /// # Panics
+    /// This will panic if you do not provide the RIOT_API_KEY environment variable with value being api token.
+    pub fn new(region: Region) -> Result<LeagueClient, ClientError> {
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
-        let api_key = std::env::var("RIOT_API_KEY")?;
+        let api_key = std::env::var("RIOT_API_KEY").context(NoToken {})?;
+        check_token(&api_key)?;
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
         Ok(LeagueClient {
@@ -60,14 +68,14 @@ impl LeagueClient {
         })
     }
 
-    /// Adds an embedded ddragon client instance to league api client.
-    pub fn with_ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
+    /// Adds an embedded ddragon client instance to league api client that shares cache and client with parent.
+    pub fn with_ddragon(self, language: LanguageCode) -> Self {
         let ddragon =
-            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
-        Ok(LeagueClient {
+            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language);
+        LeagueClient {
             ddragon: Some(ddragon),
             ..self
-        })
+        }
     }
 
     /// Gets mutable (because of cache) reference to ddragon client embedded in lapi client.
@@ -206,6 +214,14 @@ impl Default for LeagueClient {
     }
 }
 
+fn check_token(token: &str) -> Result<(), ClientError> {
+    if !token.contains("RGAPI") || token.len() != 42_usize {
+        WrongToken {token: token.to_owned()}.fail()
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::LeagueClient;
@@ -284,8 +300,7 @@ mod tests {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let mut lapi = LeagueClient::new(Region::default())
             .unwrap()
-            .with_ddragon(LanguageCode::UNITED_STATES)
-            .unwrap();
+            .with_ddragon(LanguageCode::UNITED_STATES);
         let mut ddragon_client = lapi.ddragon();
         let lee_sin: ChampionFullData = runtime
             .block_on(ddragon_client.get_champion("LeeSin"))
