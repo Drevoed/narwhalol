@@ -1,10 +1,10 @@
-use crate::constants::{LanguageCode, Region};
+use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 use crate::ddragon::DDragonClient;
-use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
+use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::{TryFutureExt, FutureExt, Future};
+use futures::{Future, FutureExt, TryFutureExt};
 
 use hyper::{HeaderMap, Uri};
 
@@ -13,6 +13,7 @@ use log::{debug, trace};
 use std::collections::HashMap;
 use std::env;
 
+use crate::constants::division::Division;
 use std::str;
 use std::sync::{Arc, Mutex};
 
@@ -149,6 +150,36 @@ impl LeagueClient {
         )
     }
 
+    pub fn get_league_exp_entries(
+        &mut self,
+        queue: RankedQueue,
+        tier: RankedTier,
+        division: Division,
+        pages: Option<i32>,
+    ) -> impl Future<Output = Result<Vec<LeagueInfo>, ClientError>> {
+        let url: Uri = match pages {
+            Some(p) => format!(
+                "{}/league-exp/v4/entries/{}/{}/{}?page={}",
+                &self.base_url, queue, tier, division, p
+            )
+            .parse()
+            .unwrap(),
+            None => format!(
+                "{}/league-exp/v4/entries/{}/{}/{}",
+                &self.base_url, queue, tier, division
+            )
+            .parse()
+            .unwrap(),
+        };
+
+        cached_resp(
+            self.client.clone(),
+            self.cache.clone(),
+            url,
+            Some(&self.api_key),
+        )
+    }
+
     #[cfg(test)]
     pub(crate) fn get_status(&self, status: u16) -> impl Future<Output = Result<(), ClientError>> {
         ClientError::check_status(self.region.clone(), status)
@@ -164,12 +195,13 @@ impl Default for LeagueClient {
 #[cfg(test)]
 mod tests {
     use super::LeagueClient;
-    use crate::constants::{LanguageCode, Region};
+    use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 
     use env_logger;
     use futures::prelude::*;
-    use futures::{Future, TryFutureExt, FutureExt};
+    use futures::{Future, FutureExt, TryFutureExt};
 
+    use crate::constants::division::Division;
     use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
     use crate::dto::ddragon::ChampionFullData;
     use crate::error::ClientError;
@@ -268,5 +300,21 @@ mod tests {
             .block_on(lapi.get_total_mastery_score(&summoner.id))
             .unwrap();
         assert!(score >= 192)
+    }
+
+    #[test]
+    fn gets_league_exp() -> Result<(), ClientError> {
+        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+        let mut lapi = LeagueClient::new(Region::default()).unwrap();
+        let challengers = runtime
+            .block_on(lapi.get_league_exp_entries(
+                RankedQueue::SOLO,
+                RankedTier::CHALLENGER,
+                Division::I,
+                None,
+            ))
+            .unwrap();
+        assert!(challengers.len() > 0);
+        Ok(())
     }
 }

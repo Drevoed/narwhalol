@@ -2,16 +2,16 @@ use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
 use futures::prelude::*;
-use futures::{TryFutureExt, Future, FutureExt, Stream, StreamExt, TryStreamExt};
+use futures::{Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use hyper::header::HeaderValue;
-use hyper::{Body, Client as HttpClient, Request, Uri, Response};
+use hyper::{Body, Client as HttpClient, Request, Response, Uri};
 use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use std::fmt::Debug;
 use std::sync::Arc;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
 
 pub(crate) fn construct_hyper_client() -> Client {
     let mut https = HttpsConnector::new(4).unwrap();

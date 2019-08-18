@@ -3,8 +3,8 @@ use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::{TryFutureExt, FutureExt, Future, Stream, StreamExt, TryStream, TryStreamExt};
-use futures::compat::{Stream01CompatExt, Future01CompatExt};
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::{Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStream, TryStreamExt};
 use hyper::Uri;
 
 use std::collections::HashMap;
