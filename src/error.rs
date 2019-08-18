@@ -2,9 +2,10 @@
 
 use crate::constants::Region;
 
-use futures::future::{err, ok};
-use futures::Future;
 use snafu::Snafu;
+use futures::{TryFutureExt, FutureExt, Future};
+use futures::prelude::*;
+use futures::future::{ok, err};
 
 macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
@@ -73,10 +74,7 @@ pub enum ClientError {
 }
 
 impl ClientError {
-    pub(crate) fn check_status(
-        region: Region,
-        code: u16,
-    ) -> impl Future<Item = (), Error = ClientError> {
+    pub fn check_status(region: Region, code: u16) -> impl Future<Output = Result<(), ClientError>> {
         use self::ClientError::*;
         match code {
             400 => err(BadRequest),

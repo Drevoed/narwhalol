@@ -1,15 +1,17 @@
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use futures::future::{ok, Either};
-use futures::{Future, Stream};
+use futures::prelude::*;
+use futures::{TryFutureExt, Future, FutureExt, Stream, StreamExt, TryStreamExt};
 use hyper::header::HeaderValue;
-use hyper::{Body, Client as HttpClient, Request, Uri};
+use hyper::{Body, Client as HttpClient, Request, Uri, Response};
 use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
 use std::fmt::Debug;
 use std::sync::Arc;
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
 
 /// Helper function that constructs an https hyper client
 pub(crate) fn construct_hyper_client() -> Client {
@@ -25,8 +27,7 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
     cache: Cache,
     url: Uri,
     api_key: Option<&str>,
-) -> impl Future<Item = T, Error = ClientError> {
-    // get None or Some(T) from cache
+) -> impl Future<Output = Result<T, ClientError>> {
     let maybe_resp: Option<T> = cache
         .lock()
         .unwrap()
@@ -34,9 +35,8 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
         .map(|res| serde_json::from_str(res).unwrap());
 
     if let Some(resp) = maybe_resp {
-        debug!("Found cached");
-        // Return deserialized from cache
-        Either::A(ok(resp))
+        debug!("Found cached: {:?}", resp);
+        Either::Left(ok(resp))
     } else {
         debug!("Nothing in cache. Fetching...");
         // We got nothing in cache, try fetching from utl
@@ -52,16 +52,14 @@ pub(crate) fn cached_resp<T: Debug + DeserializeOwned>(
             .body(Body::from(""))
             .unwrap();
         let do_request = client.request(req);
-        // Return future that fetches from url and deserializes
-        Either::B(
+        Either::Right(
             do_request
-                // Get body
-                .and_then(|resp| {
+                .and_then(|resp: Response<Body>| {
                     let body = resp.into_body();
-                    body.concat2()
+                    body.try_concat()
                 })
-                // Deserialize body to type T, insert the url and plaintext response to cache and return deserialized
-                .map(move |chunk| {
+                // Deserialize body to type T and insert to cache, then return it back
+                .map_ok(move |chunk| {
                     let string_response = String::from_utf8(chunk.to_vec()).unwrap();
                     debug!("Deserializing...");
                     let deserialized: T = serde_json::from_str(&string_response).unwrap();

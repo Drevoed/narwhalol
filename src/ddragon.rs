@@ -3,7 +3,8 @@ use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
 use crate::error::ClientError;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::{Future, Stream};
+use futures::{TryFutureExt, FutureExt, Future, Stream, StreamExt, TryStream, TryStreamExt};
+use futures::compat::{Stream01CompatExt, Future01CompatExt};
 use hyper::Uri;
 
 use std::collections::HashMap;
@@ -31,8 +32,8 @@ impl DDragonClient {
                             .parse()
                             .unwrap(),
                     )
-                    .and_then(|resp| resp.into_body().concat2())
-                    .map(|chunk| {
+                    .and_then(|resp| resp.into_body().try_concat())
+                    .map_ok(|chunk| {
                         let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
                         let versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
                         versions
@@ -67,7 +68,7 @@ impl DDragonClient {
         }
     }
 
-    pub fn get_champions(&mut self) -> impl Future<Item = AllChampions, Error = ClientError> {
+    pub fn get_champions(&mut self) -> impl Future<Output = Result<AllChampions, ClientError>> {
         let url: Uri = format!("{}/champion.json", &self.base_url).parse().unwrap();
         cached_resp(self.client.clone(), self.cache.clone(), url, None)
     }
@@ -75,13 +76,13 @@ impl DDragonClient {
     pub fn get_champion(
         &mut self,
         name: &str,
-    ) -> impl Future<Item = ChampionFullData, Error = ClientError> {
+    ) -> impl Future<Output = Result<ChampionFullData, ClientError>> {
         let name = name.to_owned();
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
         cached_resp::<ChampionExtended>(self.client.clone(), self.cache.clone(), url, None)
-            .map(move |mut ext| ext.data.remove(&name).unwrap())
+            .map_ok(move |mut ext| ext.data.remove(&name).unwrap())
     }
 }
 
