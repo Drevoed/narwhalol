@@ -15,7 +15,6 @@ before_script:
 os:
 - linux
 rust:
-- stable
 - nightly
 script:
 - cargo clean
