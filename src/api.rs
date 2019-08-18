@@ -1,3 +1,6 @@
+//! Easy to use async riot api wrapper.
+//!
+
 use crate::constants::{LanguageCode, Region};
 use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
@@ -18,18 +21,29 @@ use std::str;
 use std::sync::{Arc, Mutex};
 
 /// Main type for calling League API Endpoints.
+/// Instances of `LeagueClient` can be created using [`new`] with a [`Region`] parameter
+///
+/// `LeagueClient` can have an embedded [`DDragonClient`] instance embedded in itself,
+/// reference to which can be obtained using [`ddragon`]. ***NOTE***: this method will panic if
+/// you don't create the instance using [`with_ddragon`].
+///
+/// [`new`]: #method.new
+/// [`Region`]: ../constants/region/struct.Region.html
+/// [`DDragonClient`]: ../ddragon/struct.DDragonClient.html
+/// [`ddragon`]: #method.ddragon
+/// [`with_ddragon`]: #method.with_ddragon
 #[derive(Debug)]
 pub struct LeagueClient {
     client: Client,
     cache: Cache,
     region: Region,
     base_url: String,
-    pub ddragon: Option<DDragonClient>,
+    ddragon: Option<DDragonClient>,
     api_key: String,
 }
 
 impl LeagueClient {
-    /// Constructor function for LeagueAPI struct, accepts Region type as a parameter
+    /// Constructor function for LeagueAPI struct, accepts type as a parameter
     pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
         let _headers = HeaderMap::new();
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
@@ -46,6 +60,7 @@ impl LeagueClient {
         })
     }
 
+    /// Adds an embedded ddragon client instance to league api client.
     pub fn with_ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
         let ddragon =
             DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
@@ -55,6 +70,12 @@ impl LeagueClient {
         })
     }
 
+    /// Gets mutable (because of cache) reference to ddragon client embedded in lapi client.
+    ///
+    /// # Panics
+    /// Do not call `ddragon` if [`with_ddragon`] is not called beforehand.
+    ///
+    /// [`with_ddragon`]: #method.with_ddragon
     pub fn ddragon(&mut self) -> &mut DDragonClient {
         match self.ddragon {
             Some(ref mut dd) => dd,
@@ -65,6 +86,29 @@ impl LeagueClient {
         }
     }
 
+    ///Get summoner by plaintext name
+    /// # Example
+    /// ```
+    /// extern crate tokio;
+    /// extern crate narwhalol;
+    /// extern crate futures;
+    /// use narwhalol::{LeagueClient, Region, dto::api::Summoner};
+    /// use futures::future::lazy;
+    /// use tokio::prelude::*;
+    ///
+    /// fn main() {
+    /// let mut lapi = LeagueClient::new(Region::RU).unwrap();
+    ///     tokio::run(lazy(move || {
+    ///         lapi
+    ///             .get_summoner_by_name("Vetro")
+    ///             .map(|summmoner: Summoner| {
+    ///                 println!("Summoner's name is: {}", summmoner.name);
+    ///             })
+    ///             .map_err(|_| ())
+    ///     }))
+    /// }
+    /// ```
+    ///
     pub fn get_summoner_by_name(
         &mut self,
         name: &str,

@@ -47,6 +47,7 @@ impl Region {
     /// Public Beta Environment
     pub const PBE: Region = Region(PBE);
 
+    /// String representation of Region
     #[inline]
     pub fn as_str(&self) -> &str {
         match self.0 {
@@ -65,6 +66,7 @@ impl Region {
         }
     }
 
+    /// Platform string to make requests
     #[inline]
     pub fn as_platform_str(&self) -> &str {
         match self.0 {
