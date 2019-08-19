@@ -20,7 +20,7 @@ pub struct DDragonClient {
 }
 
 impl DDragonClient {
-    pub fn new(language: LanguageCode) -> Result<DDragonClient, ClientError> {
+    pub fn new(language: LanguageCode) -> DDragonClient {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
@@ -46,31 +46,26 @@ impl DDragonClient {
             "https://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &language
         );
-        let ddragon = DDragonClient {
+        DDragonClient {
             version: version.into(),
             base_url,
             client,
             cache,
-        };
-        Ok(ddragon)
+        }
     }
 
-    pub(crate) fn new_for_lapi(
-        client: Client,
-        cache: Cache,
-        lang: LanguageCode,
-    ) -> Result<DDragonClient, ClientError> {
+    pub(crate) fn new_for_lapi(client: Client, cache: Cache, lang: LanguageCode) -> DDragonClient {
         let version = "9.15.1";
         let base_url = format!(
             "https://ddragon.leagueoflegends.com/cdn/{}/data/{}",
             version, &lang
         );
-        Ok(DDragonClient {
+        DDragonClient {
             version: version.into(),
             client,
             cache,
             base_url,
-        })
+        }
     }
 
     pub fn get_champions(&mut self) -> impl Future<Output = Result<AllChampions, ClientError>> {
@@ -100,14 +95,14 @@ mod tests {
 
     #[test]
     fn creates_proper_instance() {
-        let cli = DDragonClient::new(LanguageCode::RUSSIA).unwrap();
+        let cli = DDragonClient::new(LanguageCode::RUSSIA);
         println!("{:?}", &cli)
     }
 
     #[test]
     fn gets_full_champion_data() {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
-        let mut client = DDragonClient::new(LanguageCode::UNITED_STATES).unwrap();
+        let mut client = DDragonClient::new(LanguageCode::UNITED_STATES);
         let xayah: ChampionFullData = runtime.block_on(client.get_champion("Xayah")).unwrap();
         assert_eq!(xayah.name, "Xayah");
     }

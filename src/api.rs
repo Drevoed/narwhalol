@@ -1,4 +1,10 @@
 use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
+//! Easy to use async riot api wrapper.
+//!
+//! # Introduction
+//! This module contains all the things needed to talk with Riot API.
+//! The most important type here is
+//! [`LeagueClient`], as it is the main way of getting the data from API. See [`LeagueClient`] for more information.
 use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
@@ -7,6 +13,7 @@ use crate::utils::{cached_resp, construct_hyper_client};
 use futures::Future;
 
 use hyper::{HeaderMap, Uri};
+use snafu::ResultExt;
 
 use log::{debug, trace};
 
@@ -18,22 +25,36 @@ use std::str;
 use std::sync::{Arc, Mutex};
 
 /// Main type for calling League API Endpoints.
+/// Instances of `LeagueClient` can be created using [`new`] with a [`Region`] parameter
+///
+/// `LeagueClient` can have an embedded [`DDragonClient`] instance embedded in itself,
+/// reference to which can be obtained using [`ddragon`]. ***NOTE***: this method will panic if
+/// you don't create the instance using [`with_ddragon`].
+///
+/// [`new`]: #method.new
+/// [`Region`]: ../constants/region/struct.Region.html
+/// [`DDragonClient`]: ../ddragon/struct.DDragonClient.html
+/// [`ddragon`]: #method.ddragon
+/// [`with_ddragon`]: #method.with_ddragon
 #[derive(Debug)]
 pub struct LeagueClient {
     client: Client,
     cache: Cache,
     region: Region,
     base_url: String,
-    pub ddragon: Option<DDragonClient>,
+    ddragon: Option<DDragonClient>,
     api_key: String,
 }
 
 impl LeagueClient {
-    /// Constructor function for LeagueAPI struct, accepts Region type as a parameter
-    pub fn new(region: Region) -> Result<LeagueClient, env::VarError> {
-        let _headers = HeaderMap::new();
+    /// Constructor function for LeagueAPI struct, accepts type as a parameter
+    ///
+    /// # Panics
+    /// This will panic if you do not provide the RIOT_API_KEY environment variable with value being api token.
+    pub fn new(region: Region) -> Result<LeagueClient, ClientError> {
         let base_url = format!("https://{}.api.riotgames.com/lol", region.as_platform_str());
-        let api_key = std::env::var("RIOT_API_KEY")?;
+        let api_key = std::env::var("RIOT_API_KEY").context(NoToken {})?;
+        check_token(&api_key)?;
         let client = construct_hyper_client();
         let cache: Cache = Arc::new(Mutex::new(HashMap::new()));
         Ok(LeagueClient {
@@ -46,15 +67,22 @@ impl LeagueClient {
         })
     }
 
-    pub fn with_ddragon(self, language: LanguageCode) -> Result<Self, ClientError> {
+    /// Adds an embedded ddragon client instance to league api client that shares cache and client with parent.
+    pub fn with_ddragon(self, language: LanguageCode) -> Self {
         let ddragon =
-            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)?;
-        Ok(LeagueClient {
+            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language);
+        LeagueClient {
             ddragon: Some(ddragon),
             ..self
-        })
+        }
     }
 
+    /// Gets mutable (because of cache) reference to ddragon client embedded in lapi client.
+    ///
+    /// # Panics
+    /// Do not call `ddragon` if [`with_ddragon`] is not called beforehand.
+    ///
+    /// [`with_ddragon`]: #method.with_ddragon
     pub fn ddragon(&mut self) -> &mut DDragonClient {
         match self.ddragon {
             Some(ref mut dd) => dd,
@@ -65,6 +93,26 @@ impl LeagueClient {
         }
     }
 
+    ///Get summoner by plaintext name
+    /// # Example
+    /// ```
+    /// #![feature(async_await)]
+    /// #[macro_use]
+    /// extern crate tokio;
+    /// extern crate narwhalol;
+    /// use narwhalol::{LeagueClient, Region, dto::api::Summoner, error::ClientError};
+    /// use tokio::prelude::*;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), ClientError> {
+    ///     let mut lapi = LeagueClient::new(Region::RU).unwrap();
+    ///     let summoner = lapi.get_summoner_by_name("Vetro").await?;
+    ///     assert_eq!(summoner.name, "Vetro");
+    ///     Ok(())
+    /// }
+    ///
+    /// ```
+    ///
     pub fn get_summoner_by_name(
         &mut self,
         name: &str,
@@ -192,6 +240,17 @@ impl Default for LeagueClient {
     }
 }
 
+fn check_token(token: &str) -> Result<(), ClientError> {
+    if !token.contains("RGAPI") || token.len() != 42_usize {
+        WrongToken {
+            token: token.to_owned(),
+        }
+        .fail()
+    } else {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::LeagueClient;
@@ -271,8 +330,7 @@ mod tests {
         let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
         let mut lapi = LeagueClient::new(Region::default())
             .unwrap()
-            .with_ddragon(LanguageCode::UNITED_STATES)
-            .unwrap();
+            .with_ddragon(LanguageCode::UNITED_STATES);
         let mut ddragon_client = lapi.ddragon();
         let lee_sin: ChampionFullData = runtime
             .block_on(ddragon_client.get_champion("LeeSin"))

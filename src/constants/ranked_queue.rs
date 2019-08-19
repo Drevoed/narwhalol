@@ -21,6 +21,7 @@ impl RankedQueue {
     /// Twisted Treeline ranked queue (soon will be deprecated)
     pub const TWISTED_TREELINE: RankedQueue = RankedQueue(TwistedTreeline);
 
+    /// String representation of a ranked queue
     #[inline]
     pub fn as_str(&self) -> &str {
         match self.0 {
