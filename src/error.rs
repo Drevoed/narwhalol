@@ -3,8 +3,8 @@
 use crate::constants::Region;
 
 use futures::future::{err, ok};
-use futures::prelude::*;
-use futures::{Future, FutureExt, TryFutureExt};
+
+use futures::{Future};
 use snafu::Snafu;
 
 macro_rules! assert_matches {
