@@ -2,7 +2,7 @@
 name = "narwhalol"
 description = "Easy to use async/sync League of legends API Wrapper"
 keywords = ["api", "http"]
-version = "0.1.2"
+version = "0.2.0"
 authors = ["Kirill Mironov <arkrait04@gmail.com>"]
 edition = "2018"
 license = "MIT"
