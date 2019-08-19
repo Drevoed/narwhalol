@@ -1,4 +1,3 @@
-use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 //! Easy to use async riot api wrapper.
 //!
 //! # Introduction
@@ -6,6 +5,7 @@ use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 //! The most important type here is
 //! [`LeagueClient`], as it is the main way of getting the data from API. See [`LeagueClient`] for more information.
 use crate::ddragon::DDragonClient;
+use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
