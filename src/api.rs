@@ -4,7 +4,7 @@ use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
 use crate::utils::{cached_resp, construct_hyper_client};
-use futures::{Future};
+use futures::Future;
 
 use hyper::{HeaderMap, Uri};
 

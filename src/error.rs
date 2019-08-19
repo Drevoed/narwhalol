@@ -4,7 +4,7 @@ use crate::constants::Region;
 
 use futures::future::{err, ok};
 
-use futures::{Future};
+use futures::Future;
 use snafu::Snafu;
 
 macro_rules! assert_matches {

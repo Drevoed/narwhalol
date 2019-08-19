@@ -9,7 +9,6 @@ use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
-
 use std::fmt::Debug;
 use std::sync::Arc;
 
