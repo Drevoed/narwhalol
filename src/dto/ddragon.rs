@@ -22,7 +22,8 @@ pub struct ChampionExtended {
 pub struct ChampionData {
     pub version: String,
     pub id: String,
-    pub key: String,
+    #[serde(with = "string")]
+    pub key: u64,
     pub name: String,
     pub title: String,
     pub blurb: String,
@@ -79,7 +80,8 @@ pub struct ChampionStatsData {
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ChampionFullData {
     pub id: String,
-    pub key: String,
+    #[serde(with = "string")]
+    pub key: u64,
     pub name: String,
     pub title: String,
     pub image: ChampionImageData,
@@ -205,4 +207,26 @@ pub struct ChampionItemData {
     pub count: i64,
     #[serde(rename = "hideCount")]
     pub hide_count: Option<bool>,
+}
+
+mod string {
+    use std::fmt::Display;
+    use std::str::FromStr;
+
+    use serde::{de, Serializer, Deserialize, Deserializer};
+
+    pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
+        where T: Display,
+              S: Serializer
+        {
+            serializer.collect_str(value)
+        }
+
+    pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
+        where T: FromStr,
+              T::Err: Display,
+              D: Deserializer<'de>
+        {
+            String::deserialize(deserializer)?.parse().map_err(de::Error::custom)
+        }
 }

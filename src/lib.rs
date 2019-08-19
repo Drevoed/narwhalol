@@ -1,5 +1,5 @@
 #![doc(html_root_url = "https://docs.rs/tokio/0.2.0")]
-#![deny(warnings, missing_docs, missing_debug_implementations)]
+//#![deny(warnings, missing_docs, missing_debug_implementations)]
 #![allow(unused_mut, unused_imports, unused_macros)]
 //! Fast and easy to use wrapper for League of Legends REST API and DDragon static data API.
 //!

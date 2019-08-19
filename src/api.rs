@@ -339,7 +339,7 @@ mod tests {
             .block_on(lapi.get_summoner_by_name("Santorin"))
             .unwrap();
         let mastery: ChampionMastery = runtime
-            .block_on(lapi.get_champion_mastery_by_id(&summoner.id, lee_sin.key.parse().unwrap()))
+            .block_on(lapi.get_champion_mastery_by_id(&summoner.id, lee_sin.key))
             .unwrap();
 
         assert_eq!(mastery.champion_id, 64);
