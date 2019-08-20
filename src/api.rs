@@ -13,7 +13,7 @@ use crate::utils::{cached_resp, construct_hyper_client};
 use futures::Future;
 
 use hyper::{HeaderMap, Uri};
-use snafu::ResultExt;
+use snafu::{ResultExt, ensure};
 
 use log::{debug, trace};
 
@@ -241,14 +241,8 @@ impl Default for LeagueClient {
 }
 
 fn check_token(token: &str) -> Result<(), ClientError> {
-    if !token.contains("RGAPI") || token.len() != 42_usize {
-        WrongToken {
-            token: token.to_owned(),
-        }
-        .fail()
-    } else {
-        Ok(())
-    }
+    ensure!(token.contains("RGAPI"), WrongToken { token: token.to_owned() });
+    ensure!(token.len() == 42_usize, WrongToken { token: token.to_owned() })
 }
 
 #[cfg(test)]
