@@ -242,7 +242,8 @@ impl Default for LeagueClient {
 
 fn check_token(token: &str) -> Result<(), ClientError> {
     ensure!(token.contains("RGAPI"), WrongToken { token: token.to_owned() });
-    ensure!(token.len() == 42_usize, WrongToken { token: token.to_owned() })
+    ensure!(token.len() == 42_usize, WrongToken { token: token.to_owned() });
+    Ok(())
 }
 
 #[cfg(test)]
