@@ -43,57 +43,57 @@ impl LanguageCode {
     pub const CZECH_REPUBLIC: LanguageCode = LanguageCode(CzechRepublic);
     /// Greece language code
     pub const GREECE: LanguageCode = LanguageCode(Greece);
-
+    /// Greece language code
     pub const POLAND: LanguageCode = LanguageCode(Poland);
-
+    /// Greece language code
     pub const ROMANIA: LanguageCode = LanguageCode(Romania);
-
+    /// Greece language code
     pub const HUNGARY: LanguageCode = LanguageCode(Hungary);
-
+    /// Greece language code
     pub const UNITED_KINGDOM: LanguageCode = LanguageCode(UnitedKingdom);
-
+    /// Greece language code
     pub const GERMANY: LanguageCode = LanguageCode(Germany);
-
+    /// Greece language code
     pub const SPAIN: LanguageCode = LanguageCode(Spain);
-
+    /// Greece language code
     pub const ITALY: LanguageCode = LanguageCode(Italy);
-
+    /// Greece language code
     pub const FRANCE: LanguageCode = LanguageCode(France);
-
+    /// Greece language code
     pub const JAPAN: LanguageCode = LanguageCode(Japan);
-
+    /// Greece language code
     pub const KOREA: LanguageCode = LanguageCode(Korea);
-
+    /// Greece language code
     pub const MEXICO: LanguageCode = LanguageCode(Mexico);
-
+    /// Greece language code
     pub const ARGENTINA: LanguageCode = LanguageCode(Argentina);
-
+    /// Greece language code
     pub const BRAZIL: LanguageCode = LanguageCode(Brazil);
-
+    /// Greece language code
     pub const UNITED_STATES: LanguageCode = LanguageCode(UnitedStates);
-
+    /// Greece language code
     pub const AUSTRALIA: LanguageCode = LanguageCode(Australia);
-
+    /// Greece language code
     pub const RUSSIA: LanguageCode = LanguageCode(Russia);
-
+    /// Greece language code
     pub const TURKEY: LanguageCode = LanguageCode(Turkey);
-
+    /// Greece language code
     pub const MALAYSIA: LanguageCode = LanguageCode(Malaysia);
-
+    /// Greece language code
     pub const PHILIPINNES: LanguageCode = LanguageCode(RepublicOfThePhilipinnes);
-
+    /// Greece language code
     pub const SINGAPORE: LanguageCode = LanguageCode(Singapore);
-
+    /// Greece language code
     pub const THAILAND: LanguageCode = LanguageCode(Thailand);
-
+    /// Greece language code
     pub const VIETNAM: LanguageCode = LanguageCode(Vietnam);
-
+    /// Greece language code
     pub const INDONESIA: LanguageCode = LanguageCode(Indonesia);
-
+    /// Greece language code
     pub const MALAYSIA_CHINESE: LanguageCode = LanguageCode(MalaysiaChinese);
-
+    /// Greece language code
     pub const CHINA: LanguageCode = LanguageCode(China);
-
+    /// Greece language code
     pub const TAIWAN: LanguageCode = LanguageCode(Taiwan);
 
     #[inline]
