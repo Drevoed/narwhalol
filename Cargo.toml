@@ -2,7 +2,7 @@
 name = "narwhalol"
 description = "Easy to use async/sync League of legends API Wrapper"
 keywords = ["api", "http"]
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Kirill Mironov <arkrait04@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -27,5 +27,5 @@ snafu = { version = "0.4", features = ["futures-01"]}
 env_logger = "0.6.2"
 tokio = "0.2.0-alpha.1"
 futures-preview = { version = "0.3.0-alpha.17", features = ["compat"] }
-hyper = { git = "https://github.com/hyperium/hyper", version = "0.13.0-a.0", branch = "master" }
-hyper-tls = { git = "https://github.com/hyperium/hyper-tls", version = "0.3.2", branch = "master" }
+hyper = "0.13.0-alpha.1"
+hyper-tls = "0.4.0-alpha.1"

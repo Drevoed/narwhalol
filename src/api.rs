@@ -4,8 +4,8 @@
 //! This module contains all the things needed to talk with Riot API.
 //! The most important type here is
 //! [`LeagueClient`], as it is the main way of getting the data from API. See [`LeagueClient`] for more information.
-use crate::ddragon::DDragonClient;
 use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
+use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
@@ -13,7 +13,7 @@ use crate::utils::{cached_resp, construct_hyper_client};
 use futures::Future;
 
 use hyper::{HeaderMap, Uri};
-use snafu::{ResultExt, ensure};
+use snafu::{ensure, ResultExt};
 
 use log::{debug, trace};
 
@@ -68,9 +68,9 @@ impl LeagueClient {
     }
 
     /// Adds an embedded ddragon client instance to league api client that shares cache and client with parent.
-    pub fn with_ddragon(self, language: LanguageCode) -> Self {
+    pub async fn with_ddragon(self, language: LanguageCode) -> Self {
         let ddragon =
-            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language);
+            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language).await.unwrap();
         LeagueClient {
             ddragon: Some(ddragon),
             ..self
@@ -96,10 +96,6 @@ impl LeagueClient {
     ///Get summoner by plaintext name
     /// # Example
     /// ```
-    /// #![feature(async_await)]
-    /// #[macro_use]
-    /// extern crate tokio;
-    /// extern crate narwhalol;
     /// use narwhalol::{LeagueClient, Region, dto::api::Summoner, error::ClientError};
     /// use tokio::prelude::*;
     ///
@@ -113,10 +109,7 @@ impl LeagueClient {
     ///
     /// ```
     ///
-    pub fn get_summoner_by_name(
-        &mut self,
-        name: &str,
-    ) -> impl Future<Output = Result<Summoner, ClientError>> {
+    pub async fn get_summoner_by_name(&mut self, name: &str) -> Result<Summoner, ClientError> {
         println!("Getting summoner with name: {}", &name);
         let url: Uri = format!("{}/summoner/v4/summoners/by-name/{}", self.base_url, name)
             .parse()
@@ -128,9 +121,10 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
-    pub fn get_champion_info(&mut self) -> impl Future<Output = Result<ChampionInfo, ClientError>> {
+    pub async fn get_champion_info(&mut self) -> Result<ChampionInfo, ClientError> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
@@ -140,12 +134,13 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
-    pub fn get_champion_masteries(
+    pub async fn get_champion_masteries(
         &mut self,
         summoner_id: &str,
-    ) -> impl Future<Output = Result<Vec<ChampionMastery>, ClientError>> {
+    ) -> Result<Vec<ChampionMastery>, ClientError> {
         trace!("Getting champion masteries for id: {}", &summoner_id);
         let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}",
@@ -159,13 +154,14 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
-    pub fn get_champion_mastery_by_id(
+    pub async fn get_champion_mastery_by_id(
         &mut self,
         summoner_id: &str,
         champion_id: u64,
-    ) -> impl Future<Output = Result<ChampionMastery, ClientError>> {
+    ) -> Result<ChampionMastery, ClientError> {
         let url: Uri = format!(
             "{}/champion-mastery/v4/champion-masteries/by-summoner/{}/by-champion/{}",
             self.base_url, summoner_id, champion_id
@@ -178,12 +174,10 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
-    pub fn get_total_mastery_score(
-        &mut self,
-        summoner_id: &str,
-    ) -> impl Future<Output = Result<i32, ClientError>> {
+    pub async fn get_total_mastery_score(&mut self, summoner_id: &str) -> Result<i32, ClientError> {
         let url: Uri = format!(
             "{}/champion-mastery/v4/scores/by-summoner/{}",
             self.base_url, summoner_id
@@ -196,15 +190,16 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
-    pub fn get_league_exp_entries(
+    pub async fn get_league_exp_entries(
         &mut self,
         queue: RankedQueue,
         tier: RankedTier,
         division: Division,
         pages: Option<i32>,
-    ) -> impl Future<Output = Result<Vec<LeagueInfo>, ClientError>> {
+    ) -> Result<Vec<LeagueInfo>, ClientError> {
         let url: Uri = match pages {
             Some(p) => format!(
                 "{}/league-exp/v4/entries/{}/{}/{}?page={}",
@@ -226,6 +221,7 @@ impl LeagueClient {
             url,
             Some(&self.api_key),
         )
+        .await
     }
 
     #[cfg(test)]
@@ -241,8 +237,18 @@ impl Default for LeagueClient {
 }
 
 fn check_token(token: &str) -> Result<(), ClientError> {
-    ensure!(token.contains("RGAPI"), WrongToken { token: token.to_owned() });
-    ensure!(token.len() == 42_usize, WrongToken { token: token.to_owned() });
+    ensure!(
+        token.contains("RGAPI"),
+        WrongToken {
+            token: token.to_owned()
+        }
+    );
+    ensure!(
+        token.len() == 42_usize,
+        WrongToken {
+            token: token.to_owned()
+        }
+    );
     Ok(())
 }
 
@@ -268,16 +274,13 @@ mod tests {
         debug!("{:?}", cache.lock().unwrap().keys().collect::<Vec<_>>())
     }
 
-    #[test]
-    fn gets_summoner_data() {
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    #[tokio::test]
+    async fn gets_summoner_data() {
         env_logger::init();
-        let sum: Summoner = runtime
-            .block_on(
-                LeagueClient::new(Region::NA)
-                    .unwrap()
-                    .get_summoner_by_name("Santorin"),
-            )
+        let mut lapi = LeagueClient::new(Region::NA).unwrap();
+        let sum = lapi
+            .get_summoner_by_name("Santorin")
+            .await
             .unwrap();
         assert_eq!(
             &sum.account_id,
@@ -285,56 +288,46 @@ mod tests {
         )
     }
 
-    #[test]
-    fn lapi_caches_properly() {
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    #[tokio::test]
+    async fn lapi_caches_properly() {
         let mut cli = LeagueClient::new(Region::RU).unwrap();
         let cache = cli.cache.clone();
-        let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
+        let _ = cli.get_summoner_by_name("Vetro").await.unwrap();
         let now = Instant::now();
-        let _ = runtime.block_on(cli.get_summoner_by_name("Vetro")).unwrap();
+        let _ = cli.get_summoner_by_name("Vetro").await.unwrap();
         assert!(now.elapsed().as_millis() <= 2);
         print_cache(cache);
     }
 
-    #[test]
-    fn gets_champion_info() {
+    #[tokio::test]
+    async fn gets_champion_info() {
         let mut lapi = LeagueClient::new(Region::default()).unwrap();
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
-        let champ_info = runtime.block_on(lapi.get_champion_info()).unwrap();
+        let champ_info = lapi.get_champion_info().await.unwrap();
         assert!(champ_info.free_champion_ids.len() > 10);
         assert!(champ_info.free_champion_ids_for_new_players.len() > 0);
         assert_ne!(champ_info.max_new_player_level, 0)
     }
 
-    #[test]
-    fn gets_champion_masteries() {
+    #[tokio::test]
+    async fn gets_champion_masteries() {
         let mut lapi = LeagueClient::new(Region::NA).unwrap();
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
-        let masteries: Vec<ChampionMastery> = runtime
-            .block_on(
-                lapi.get_summoner_by_name("Santorin")
-                    .and_then(move |summoner| lapi.get_champion_masteries(&summoner.id)),
-            )
-            .unwrap();
+        let summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
+        let masteries = lapi.get_champion_masteries(&summoner.id).await.unwrap();
         assert_ne!(masteries.len(), 0)
     }
 
-    #[test]
-    fn gets_champion_mastery_by_id() {
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    #[tokio::test]
+    async fn gets_champion_mastery_by_id() {
         let mut lapi = LeagueClient::new(Region::default())
             .unwrap()
-            .with_ddragon(LanguageCode::UNITED_STATES);
+            .with_ddragon(LanguageCode::UNITED_STATES)
+            .await;
         let mut ddragon_client = lapi.ddragon();
-        let lee_sin: ChampionFullData = runtime
-            .block_on(ddragon_client.get_champion("LeeSin"))
-            .unwrap();
-        let summoner: Summoner = runtime
-            .block_on(lapi.get_summoner_by_name("Santorin"))
-            .unwrap();
-        let mastery: ChampionMastery = runtime
-            .block_on(lapi.get_champion_mastery_by_id(&summoner.id, lee_sin.key))
+        let lee_sin: ChampionFullData = ddragon_client.get_champion("LeeSin").await.unwrap();
+        let summoner: Summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
+        let mastery: ChampionMastery = lapi
+            .get_champion_mastery_by_id(&summoner.id, lee_sin.key)
+            .await
             .unwrap();
 
         assert_eq!(mastery.champion_id, 64);
@@ -342,30 +335,20 @@ mod tests {
         assert!(mastery.champion_points >= 93748)
     }
 
-    #[test]
-    fn gets_total_mastery_score() {
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    #[tokio::test]
+    async fn gets_total_mastery_score() {
         let mut lapi = LeagueClient::new(Region::default()).unwrap();
-        let summoner: Summoner = runtime
-            .block_on(lapi.get_summoner_by_name("Santorin"))
-            .unwrap();
-        let score = runtime
-            .block_on(lapi.get_total_mastery_score(&summoner.id))
-            .unwrap();
+        let summoner: Summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
+        let score = lapi.get_total_mastery_score(&summoner.id).await.unwrap();
         assert!(score >= 192)
     }
 
-    #[test]
-    fn gets_league_exp() -> Result<(), ClientError> {
-        let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
+    #[tokio::test]
+    async fn gets_league_exp() -> Result<(), ClientError> {
         let mut lapi = LeagueClient::new(Region::default()).unwrap();
-        let challengers = runtime
-            .block_on(lapi.get_league_exp_entries(
-                RankedQueue::SOLO,
-                RankedTier::CHALLENGER,
-                Division::I,
-                None,
-            ))
+        let challengers = lapi
+            .get_league_exp_entries(RankedQueue::SOLO, RankedTier::CHALLENGER, Division::I, None)
+            .await
             .unwrap();
         assert!(challengers.len() > 0);
         Ok(())
