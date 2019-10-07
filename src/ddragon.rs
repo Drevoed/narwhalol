@@ -1,15 +1,21 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
-use crate::error::ClientError;
+use crate::error::{ClientError, Other};
 use crate::types::{Cache, Client};
-use crate::utils::{cached_resp, construct_hyper_client, get_latest_ddragon_version};
+use crate::utils::{construct_hyper_client, get_latest_ddragon_version, CachedClient};
 
-use futures::{Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStream, TryStreamExt};
-use hyper::{Uri, Chunk};
+use futures::prelude::*;
+use hyper::{Uri, Chunk, Request, Body};
 
 use std::collections::HashMap;
 
+use async_trait::async_trait;
+
 use std::sync::{Arc, Mutex};
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+use hyper::header::HeaderValue;
+use snafu::futures::TryFutureExt;
 
 #[derive(Debug)]
 pub struct DDragonClient {
@@ -52,7 +58,7 @@ impl DDragonClient {
 
     pub async fn get_champions(&mut self) -> Result<AllChampions, ClientError> {
         let url: Uri = format!("{}/champion.json", &self.base_url).parse().unwrap();
-        cached_resp(self.client.clone(), self.cache.clone(), url, None).await
+        self.cached_resp(url).await
     }
 
     pub async fn get_champion(&mut self, name: &str) -> Result<ChampionFullData, ClientError> {
@@ -60,10 +66,43 @@ impl DDragonClient {
         let url: Uri = format!("{}/champion/{}.json", &self.base_url, &name)
             .parse()
             .unwrap();
-        let resp =
-            cached_resp::<ChampionExtended>(self.client.clone(), self.cache.clone(), url, None)
-                .await;
-        resp.map(|mut ext| ext.data.remove(&name).unwrap())
+        let mut resp = self.cached_resp::<ChampionExtended>(url).await?;
+        Ok(resp.data.remove(&name).unwrap())
+    }
+}
+
+#[async_trait]
+impl CachedClient for DDragonClient {
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&mut self, url: Uri) -> Result<T, ClientError> {
+        let maybe_resp: Option<T> = self.cache
+            .lock()
+            .unwrap()
+            .get(&url)
+            .map(|res| serde_json::from_str(res).unwrap());
+
+        if let Some(resp) = maybe_resp {
+            debug!("Found cached: {:?}", resp);
+            Ok(resp)
+        } else {
+            debug!("Nothing in cache. Fetching...");
+            // We got nothing in cache, try fetching from utl
+            let url2 = url.clone();
+            let req = Request::builder()
+                .uri(url)
+                .body(Default::default())
+                .unwrap();
+            let resp = self.client
+                .request(req)
+                .with_context(|| Other {})
+                .await?;
+            let body = resp.into_body();
+            let chunk = body.try_concat().with_context(|| Other { }).await?;
+            let string_response = String::from_utf8(chunk.to_vec()).unwrap();
+            debug!("Deserializing...");
+            let deserialized: T = serde_json::from_str(&string_response).unwrap();
+            self.cache.lock().unwrap().insert(url2, string_response);
+            Ok(deserialized)
+        }
     }
 }
 

@@ -1,28 +1,34 @@
-use crate::error::ClientError;
+use crate::error::{ClientError, Other};
 use crate::types::{Cache, Client};
-use futures::future::{ok, Either};
 use futures::prelude::*;
-use futures::{Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use hyper::header::HeaderValue;
 use hyper::{Body, Chunk, Client as HttpClient, Request, Response, Uri};
 use hyper_tls::HttpsConnector;
 
 use serde::de::DeserializeOwned;
 
+use async_trait::async_trait;
+
 use std::fmt::Debug;
 use std::sync::Arc;
+use snafu::futures::*;
+
+#[async_trait]
+pub(crate) trait CachedClient {
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&mut self, url: Uri) -> Result<T, ClientError>;
+}
 
 pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String, ClientError> {
     let resp = client.get(
         "https://ddragon.leagueoflegends.com/api/versions.json"
             .parse()
             .unwrap(),
-    ).await.map_err(|e| ClientError::Other { source: e })?;
+    ).with_context(|| Other { }).await?;
     let chunk: Chunk = resp
         .into_body()
         .try_concat()
-        .await
-        .map_err(|e| ClientError::Other { source: e })?;
+        .with_context(|| Other { })
+        .await?;
     let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
     let mut versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
     let version = versions.remove(0);

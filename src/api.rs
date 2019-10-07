@@ -9,11 +9,14 @@ use crate::ddragon::DDragonClient;
 use crate::dto::api::{ChampionInfo, ChampionMastery, LeagueInfo, Summoner};
 use crate::error::*;
 use crate::types::{Cache, Client};
-use crate::utils::{cached_resp, construct_hyper_client};
-use futures::Future;
+use crate::utils::{cached_resp, construct_hyper_client, CachedClient};
+use futures::prelude::*;
 
-use hyper::{HeaderMap, Uri};
-use snafu::{ensure, ResultExt};
+use hyper::{HeaderMap, Uri, Body, Request};
+use snafu::{
+    ensure, ResultExt,
+    futures::TryFutureExt
+};
 
 use log::{debug, trace};
 
@@ -23,6 +26,11 @@ use std::env;
 use crate::constants::division::Division;
 use std::str;
 use std::sync::{Arc, Mutex};
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+
+use async_trait::async_trait;
+use hyper::header::HeaderValue;
 
 /// Main type for calling League API Endpoints.
 /// Instances of `LeagueClient` can be created using [`new`] with a [`Region`] parameter
@@ -115,26 +123,14 @@ impl LeagueClient {
             .parse()
             .unwrap();
         debug!("Constructed url: {:?}", &url);
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     pub async fn get_champion_info(&mut self) -> Result<ChampionInfo, ClientError> {
         let url: Uri = format!("{}/platform/v3/champion-rotations", self.base_url)
             .parse()
             .unwrap();
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     pub async fn get_champion_masteries(
@@ -148,13 +144,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     pub async fn get_champion_mastery_by_id(
@@ -168,13 +158,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     pub async fn get_total_mastery_score(&mut self, summoner_id: &str) -> Result<i32, ClientError> {
@@ -184,13 +168,7 @@ impl LeagueClient {
         )
         .parse()
         .unwrap();
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     pub async fn get_league_exp_entries(
@@ -215,18 +193,50 @@ impl LeagueClient {
             .unwrap(),
         };
 
-        cached_resp(
-            self.client.clone(),
-            self.cache.clone(),
-            url,
-            Some(&self.api_key),
-        )
-        .await
+        self.cached_resp(url).await
     }
 
     #[cfg(test)]
-    pub(crate) fn get_status(&self, status: u16) -> impl Future<Output = Result<(), ClientError>> {
+    pub(crate) fn get_status(&self, status: u16) -> Result<(), ClientError> {
         ClientError::check_status(self.region.clone(), status)
+    }
+}
+
+#[async_trait]
+impl CachedClient for LeagueClient {
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&mut self, url: Uri) -> Result<T, ClientError> {
+        let maybe_resp: Option<T> = self.cache
+            .lock()
+            .unwrap()
+            .get(&url)
+            .map(|res| serde_json::from_str(res).unwrap());
+
+        if let Some(resp) = maybe_resp {
+            debug!("Found cached: {:?}", resp);
+            Ok(resp)
+        } else {
+            debug!("Nothing in cache. Fetching from league API...");
+            // We got nothing in cache, try fetching from utl
+            let url2 = url.clone();
+            let header = HeaderValue::from_str(&self.api_key).unwrap();
+            let req = Request::builder()
+                .header("X-Riot-Token", header)
+                .uri(url)
+                .body(Body::default())
+                .unwrap();
+            let resp = self.client
+                .request(req)
+                .with_context(|| Other {})
+                .await?;
+            let body = resp.into_body();
+
+            let chunk = body.try_concat().with_context(|| Other {}).await?;
+            let string_response = String::from_utf8(chunk.to_vec()).unwrap();
+            debug!("Deserializing...");
+            let deserialized: T = serde_json::from_str(&string_response).unwrap();
+            self.cache.lock().unwrap().insert(url2, string_response);
+            Ok(deserialized)
+        }
     }
 }
 
@@ -326,7 +336,7 @@ mod tests {
         let lee_sin: ChampionFullData = ddragon_client.get_champion("LeeSin").await.unwrap();
         let summoner: Summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
         let mastery: ChampionMastery = lapi
-            .get_champion_mastery_by_id(&summoner.id, lee_sin.key)
+            .get_champion_mastery_by_id(&summoner.id, lee_sin.key.parse().unwrap())
             .await
             .unwrap();
 
@@ -337,7 +347,10 @@ mod tests {
 
     #[tokio::test]
     async fn gets_total_mastery_score() {
-        let mut lapi = LeagueClient::new(Region::default()).unwrap();
+        let mut lapi = LeagueClient::new(Region::default()).map_err(|e| {
+            println!("{}", e);
+            e
+        }).unwrap();
         let summoner: Summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
         let score = lapi.get_total_mastery_score(&summoner.id).await.unwrap();
         assert!(score >= 192)

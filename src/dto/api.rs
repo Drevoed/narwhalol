@@ -1,4 +1,4 @@
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Summoner {
     pub profile_icon_id: i32,
@@ -10,7 +10,7 @@ pub struct Summoner {
     pub account_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChampionInfo {
     pub free_champion_ids: Vec<i64>,
@@ -18,7 +18,7 @@ pub struct ChampionInfo {
     pub max_new_player_level: i64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChampionMastery {
     pub chest_granted: bool,
@@ -32,13 +32,11 @@ pub struct ChampionMastery {
     pub summoner_id: String,
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LeagueInfo {
-    #[serde(rename = "queueType")]
     pub queue_type: String,
-    #[serde(rename = "summonerName")]
     pub summoner_name: String,
-    #[serde(rename = "hotStreak")]
     pub hot_streak: bool,
     pub wins: i64,
     pub veteran: bool,
@@ -46,12 +44,8 @@ pub struct LeagueInfo {
     pub rank: String,
     pub tier: String,
     pub inactive: bool,
-    #[serde(rename = "freshBlood")]
     pub fresh_blood: bool,
-    #[serde(rename = "leagueId")]
     pub league_id: String,
-    #[serde(rename = "summonerId")]
     pub summoner_id: String,
-    #[serde(rename = "leaguePoints")]
     pub league_points: i64,
 }
