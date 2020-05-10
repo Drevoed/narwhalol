@@ -1,11 +1,12 @@
 use crate::constants::LanguageCode;
 use crate::dto::ddragon::{AllChampions, ChampionExtended, ChampionFullData};
-use crate::error::{ClientError, Other};
+use crate::error::{ClientError, HyperError};
 use crate::types::{Cache, Client};
 use crate::utils::{construct_hyper_client, get_latest_ddragon_version, CachedClient};
+use log::debug;
 
 use futures::prelude::*;
-use hyper::{Uri, Chunk, Request, Body};
+use hyper::{Uri, Request, Body};
 
 use std::collections::HashMap;
 
@@ -15,7 +16,7 @@ use std::sync::{Arc, Mutex};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 use hyper::header::HeaderValue;
-use snafu::futures::TryFutureExt;
+use snafu::ResultExt;
 
 #[derive(Debug)]
 pub struct DDragonClient {
@@ -73,7 +74,7 @@ impl DDragonClient {
 
 #[async_trait]
 impl CachedClient for DDragonClient {
-    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&mut self, url: Uri) -> Result<T, ClientError> {
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&self, url: Uri) -> Result<T, ClientError> {
         let maybe_resp: Option<T> = self.cache
             .lock()
             .unwrap()
@@ -93,11 +94,12 @@ impl CachedClient for DDragonClient {
                 .unwrap();
             let resp = self.client
                 .request(req)
-                .with_context(|| Other {})
-                .await?;
+                .await
+                .context(HyperError)?;
             let body = resp.into_body();
-            let chunk = body.try_concat().with_context(|| Other { }).await?;
-            let string_response = String::from_utf8(chunk.to_vec()).unwrap();
+            let bytes = hyper::body::to_bytes(body).await.unwrap();
+            let string_response = String::from_utf8(bytes.to_vec()).unwrap();
+                //.context(FromUTF8Error);
             debug!("Deserializing...");
             let deserialized: T = serde_json::from_str(&string_response).unwrap();
             self.cache.lock().unwrap().insert(url2, string_response);
@@ -113,16 +115,20 @@ mod tests {
     use crate::dto::ddragon::{AllChampions, ChampionFullData};
     use std::time::Instant;
 
-    #[tokio::test]
-    async fn creates_proper_instance() {
-        let cli = DDragonClient::new(LanguageCode::RUSSIA).await.unwrap();
-        println!("{:?}", &cli)
+    #[test]
+    fn creates_proper_instance() {
+        smol::run(async {
+            let cli = DDragonClient::new(LanguageCode::RUSSIA).await.unwrap();
+            println!("{:?}", &cli)
+        })
     }
 
-    #[tokio::test]
-    async fn gets_full_champion_data() {
-        let mut client = DDragonClient::new(LanguageCode::UNITED_STATES).await.unwrap();
-        let xayah = client.get_champion("Xayah").await.unwrap();
-        assert_eq!(xayah.name, "Xayah");
+    #[test]
+    fn gets_full_champion_data() {
+        smol::run(async {
+            let mut client = DDragonClient::new(LanguageCode::UNITED_STATES).await.unwrap();
+            let xayah = client.get_champion("Xayah").await.unwrap();
+            assert_eq!(xayah.name, "Xayah");
+        })
     }
 }

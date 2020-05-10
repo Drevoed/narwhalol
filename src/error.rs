@@ -6,6 +6,7 @@ use futures::future::{err, ok};
 
 use futures::Future;
 use snafu::Snafu;
+use std::string::FromUtf8Error;
 
 macro_rules! assert_matches {
     ($expression:expr, $($pattern:tt)+) => {
@@ -64,13 +65,25 @@ pub enum ClientError {
 
     /// Hyper error
     #[snafu(display("hyper errored: {}", source))]
-    Other { source: hyper::Error },
+    HyperError { source: hyper::Error },
     /// This error is returned when the user provides no token
-    #[snafu(display("Please provide the correct token variable as it is {}", source))]
+    #[snafu(display("Please provide the correct RIOT_API_KEY variable because {}", source))]
     NoToken { source: std::env::VarError },
     /// This error is returned when the user provides malformed token
     #[snafu(display("Provided token {} is not correct riot api token", token))]
     WrongToken { token: String },
+
+    #[snafu(display("Unsupported scheme: {:?}", scheme))]
+    UnsupportedScheme { scheme: Option<String> },
+
+    #[snafu(display("Could not make string from ut8: {}", source))]
+    FromUTF8Error { source: FromUtf8Error },
+
+    #[snafu(display("Got native tls error: {}", source))]
+    NativeTLSError { source: native_tls::Error },
+
+    #[snafu(display("Got io error: {}", source))]
+    IOError { source: std::io::Error }
 }
 
 impl ClientError {

@@ -4,11 +4,6 @@
 //! Fast and easy to use wrapper for League of Legends REST API and DDragon static data API.
 //!
 //! Narwhalol bundles both Riot League of Legends and DDragon wrapper clients in itself.
-
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate log;
 extern crate hyper;
 pub mod api;
 #[cfg_attr(tarpaulin, skip)]

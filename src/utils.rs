@@ -1,9 +1,9 @@
-use crate::error::{ClientError, Other};
-use crate::types::{Cache, Client};
+use crate::error::{ClientError, HyperError};
+use crate::types::{Cache, Client, SmolExecutor, SmolConnector};
 use futures::prelude::*;
 use hyper::header::HeaderValue;
-use hyper::{Body, Chunk, Client as HttpClient, Request, Response, Uri};
-use hyper_tls::HttpsConnector;
+use hyper::{Body, Client as HttpClient, Request, Response, Uri};
+use log::debug;
 
 use serde::de::DeserializeOwned;
 
@@ -11,11 +11,12 @@ use async_trait::async_trait;
 
 use std::fmt::Debug;
 use std::sync::Arc;
-use snafu::futures::*;
+use snafu::ResultExt;
+use crate::error::*;
 
 #[async_trait]
 pub(crate) trait CachedClient {
-    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&mut self, url: Uri) -> Result<T, ClientError>;
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&self, url: Uri) -> Result<T, ClientError>;
 }
 
 pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String, ClientError> {
@@ -23,13 +24,18 @@ pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String,
         "https://ddragon.leagueoflegends.com/api/versions.json"
             .parse()
             .unwrap(),
-    ).with_context(|| Other { }).await?;
-    let chunk: Chunk = resp
+    )
+        .await
+        .context(HyperError)?;
+    let body = resp
         .into_body()
-        .try_concat()
-        .with_context(|| Other { })
-        .await?;
-    let string_resp = String::from_utf8(chunk.to_vec()).unwrap();
+        .try_fold(Vec::new(), |mut body, chunk| async move {
+            body.extend_from_slice(&chunk);
+            Ok(body)
+        })
+        .await
+        .context(HyperError)?;
+    let string_resp = String::from_utf8(body).context(FromUTF8Error)?;
     let mut versions: Vec<String> = serde_json::from_str(&string_resp).unwrap();
     let version = versions.remove(0);
     Ok(version)
@@ -37,55 +43,8 @@ pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String,
 
 /// Helper function that constructs an https hyper client
 pub(crate) fn construct_hyper_client() -> Client {
-    let mut https = HttpsConnector::new().unwrap();
-    https.https_only(true);
-    let cli = HttpClient::builder().build::<_, Body>(https);
+    let cli = HttpClient::builder()
+        .executor(SmolExecutor)
+        .build::<_, Body>(SmolConnector);
     Arc::new(cli)
-}
-
-/// Util function that either returns deserialized response from cache or fetches response from url and then deserializes it
-pub(crate) async fn cached_resp<T: Debug + DeserializeOwned>(
-    client: Client,
-    cache: Cache,
-    url: Uri,
-    api_key: Option<&str>,
-) -> Result<T, ClientError> {
-    let maybe_resp: Option<T> = cache
-        .lock()
-        .unwrap()
-        .get(&url)
-        .map(|res| serde_json::from_str(res).unwrap());
-
-    if let Some(resp) = maybe_resp {
-        debug!("Found cached: {:?}", resp);
-        Ok(resp)
-    } else {
-        debug!("Nothing in cache. Fetching...");
-        // We got nothing in cache, try fetching from utl
-        let url2 = url.clone();
-        let mut header = HeaderValue::from_str("").unwrap();
-        // Add `X-Riot-Token` header anyway, the header value is empty if it's a ddragon url
-        if let Some(api_key) = api_key {
-            header = HeaderValue::from_str(api_key).unwrap();
-        }
-        let req = Request::builder()
-            .header("X-Riot-Token", header)
-            .uri(url)
-            .body(Body::from(""))
-            .unwrap();
-        let resp: Response<Body> = client
-            .request(req)
-            .await
-            .map_err(|e| ClientError::Other { source: e })?;
-        let chunk: Chunk = resp
-            .into_body()
-            .try_concat()
-            .await
-            .map_err(|e| ClientError::Other { source: e })?;
-        let string_response = String::from_utf8(chunk.to_vec()).unwrap();
-        debug!("Deserializing...");
-        let deserialized: T = serde_json::from_str(&string_response).unwrap();
-        cache.lock().unwrap().insert(url2, string_response);
-        Ok(deserialized)
-    }
 }
