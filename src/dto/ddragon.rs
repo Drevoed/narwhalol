@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AllChampions {
@@ -191,4 +191,3 @@ pub struct ChampionItemData {
     pub count: i64,
     pub hide_count: Option<bool>,
 }
-

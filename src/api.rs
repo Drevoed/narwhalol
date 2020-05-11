@@ -12,11 +12,8 @@ use crate::types::{Cache, Client};
 use crate::utils::{construct_hyper_client, CachedClient};
 use futures::prelude::*;
 
-use hyper::{HeaderMap, Uri, Body, Request};
-use snafu::{
-    ensure, ResultExt,
-    futures::TryFutureExt
-};
+use hyper::{Body, HeaderMap, Request, Uri};
+use snafu::{ensure, ResultExt};
 
 use log::{debug, trace};
 
@@ -24,13 +21,14 @@ use std::collections::HashMap;
 use std::env;
 
 use crate::constants::division::Division;
-use std::str;
-use std::sync::{Arc, Mutex};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
+use std::str;
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use hyper::header::HeaderValue;
+use parking_lot::Mutex;
 
 /// Main type for calling League API Endpoints.
 /// Instances of `LeagueClient` can be created using [`new`] with a [`Region`] parameter
@@ -78,7 +76,9 @@ impl LeagueClient {
     /// Adds an embedded ddragon client instance to league api client that shares cache and client with parent.
     pub async fn with_ddragon(self, language: LanguageCode) -> Self {
         let ddragon =
-            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language).await.unwrap();
+            DDragonClient::new_for_lapi(self.client.clone(), self.cache.clone(), language)
+                .await
+                .unwrap();
         LeagueClient {
             ddragon: Some(ddragon),
             ..self
@@ -204,10 +204,13 @@ impl LeagueClient {
 
 #[async_trait]
 impl CachedClient for LeagueClient {
-    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&self, url: Uri) -> Result<T, ClientError> {
-        let maybe_resp: Option<T> = self.cache
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(
+        &self,
+        url: Uri,
+    ) -> Result<T, ClientError> {
+        let maybe_resp: Option<T> = self
+            .cache
             .lock()
-            .unwrap()
             .get(&url)
             .map(|res| serde_json::from_str(res).unwrap());
 
@@ -224,16 +227,13 @@ impl CachedClient for LeagueClient {
                 .uri(url)
                 .body(Body::default())
                 .unwrap();
-            let resp = self.client
-                .request(req)
-                .await
-                .context(HyperError)?;
+            let resp = self.client.request(req).await.context(HyperError)?;
             let body = resp.into_body();
             let bytes = hyper::body::to_bytes(body).await.context(HyperError)?;
             let string_response = String::from_utf8_lossy(&bytes);
             debug!("Deserializing...");
             let deserialized: T = serde_json::from_str(&string_response).unwrap();
-            self.cache.lock().unwrap().insert(url2, string_response.into_owned());
+            self.cache.lock().insert(url2, string_response.into_owned());
             Ok(deserialized)
         }
     }
@@ -266,9 +266,9 @@ mod tests {
     use super::LeagueClient;
     use crate::constants::{LanguageCode, RankedQueue, RankedTier, Region};
 
-    use pretty_env_logger;
     use futures::prelude::*;
     use futures::{Future, FutureExt, TryFutureExt};
+    use pretty_env_logger;
 
     use crate::constants::division::Division;
     use crate::dto::api::{ChampionInfo, ChampionMastery, Summoner};
@@ -280,7 +280,7 @@ mod tests {
 
     #[cfg(test)]
     fn print_cache(cache: Cache) {
-        debug!("{:?}", cache.lock().unwrap().keys().collect::<Vec<_>>())
+        debug!("{:?}", cache.lock().keys().collect::<Vec<_>>())
     }
 
     #[test]
@@ -288,10 +288,7 @@ mod tests {
         smol::run(async {
             pretty_env_logger::init();
             let mut lapi = LeagueClient::new(Region::NA).unwrap();
-            let sum = lapi
-                .get_summoner_by_name("Santorin")
-                .await
-                .unwrap();
+            let sum = lapi.get_summoner_by_name("Santorin").await.unwrap();
             assert_eq!(
                 &sum.account_id,
                 "rPnj4h5W6OhejxB-AO3hLOQctgZcckqV_82N_8_WuCFdO2A"
@@ -357,10 +354,12 @@ mod tests {
     #[test]
     fn gets_total_mastery_score() {
         smol::run(async {
-            let mut lapi = LeagueClient::new(Region::default()).map_err(|e| {
-                println!("{}", e);
-                e
-            }).unwrap();
+            let mut lapi = LeagueClient::new(Region::default())
+                .map_err(|e| {
+                    println!("{}", e);
+                    e
+                })
+                .unwrap();
             let summoner: Summoner = lapi.get_summoner_by_name("Santorin").await.unwrap();
             let score = lapi.get_total_mastery_score(&summoner.id).await.unwrap();
             assert!(score >= 192)
@@ -372,7 +371,12 @@ mod tests {
         smol::run(async {
             let mut lapi = LeagueClient::new(Region::default()).unwrap();
             let challengers = lapi
-                .get_league_exp_entries(RankedQueue::SOLO, RankedTier::CHALLENGER, Division::I, None)
+                .get_league_exp_entries(
+                    RankedQueue::SOLO,
+                    RankedTier::CHALLENGER,
+                    Division::I,
+                    None,
+                )
                 .await
                 .unwrap();
             assert!(challengers.len() > 0);

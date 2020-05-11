@@ -1,5 +1,5 @@
 use crate::error::{ClientError, HyperError};
-use crate::types::{Cache, Client, SmolExecutor, SmolConnector};
+use crate::types::{Cache, Client, SmolConnector, SmolExecutor};
 use futures::prelude::*;
 use hyper::header::HeaderValue;
 use hyper::{Body, Client as HttpClient, Request, Response, Uri};
@@ -9,22 +9,26 @@ use serde::de::DeserializeOwned;
 
 use async_trait::async_trait;
 
+use crate::error::*;
+use snafu::ResultExt;
 use std::fmt::Debug;
 use std::sync::Arc;
-use snafu::ResultExt;
-use crate::error::*;
 
 #[async_trait]
 pub(crate) trait CachedClient {
-    async fn cached_resp<T: Debug + DeserializeOwned + Send>(&self, url: Uri) -> Result<T, ClientError>;
+    async fn cached_resp<T: Debug + DeserializeOwned + Send>(
+        &self,
+        url: Uri,
+    ) -> Result<T, ClientError>;
 }
 
 pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String, ClientError> {
-    let resp = client.get(
-        "https://ddragon.leagueoflegends.com/api/versions.json"
-            .parse()
-            .unwrap(),
-    )
+    let resp = client
+        .get(
+            "https://ddragon.leagueoflegends.com/api/versions.json"
+                .parse()
+                .unwrap(),
+        )
         .await
         .context(HyperError)?;
     let body = resp

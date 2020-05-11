@@ -7,22 +7,21 @@ authors = ["Kirill Mironov <arkrait04@gmail.com>"]
 edition = "2018"
 license = "MIT"
 readme = "README.md"
-repository = "https://github.com/Drevoed/narwhal"
+repository = "https://github.com/Drevoed/narwhalol"
 documentation = "https://docs.rs/narwhalol"
-homepage = "https://narwhal.arkrait.tech"
 
 [package.metadata.docs.rs]
 default-target = "x86_64-unknown-linux-gnu"
 
 [badges]
-travis-ci = {repository = "Drevoed/narwhal", branch = "master"}
-codecov = {repository = "Drevoed/narwhal", branch = "master", service = "github"}
+travis-ci = {repository = "Drevoed/narwhalol", branch = "master"}
+codecov = {repository = "Drevoed/narwhalol", branch = "master", service = "github"}
 
 [dependencies]
 serde = { version = "1.0.110", features = ["derive"] }
 serde_json = "1.0.53"
 log = "0.4.8"
-snafu = { version = "0.6.7", features = ["futures"] }
+snafu = "0.6.7"
 snafu-derive = "0.6.7"
 pretty_env_logger = "0.4.0"
 smol = "0.1.4"
@@ -32,3 +31,4 @@ async-native-tls = "0.3.3"
 async-trait = "0.1.13"
 tokio = { version = "0.2.20", default-features = false }
 native-tls = "0.2.4"
+parking_lot = "0.10.2"

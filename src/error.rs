@@ -83,14 +83,11 @@ pub enum ClientError {
     NativeTLSError { source: native_tls::Error },
 
     #[snafu(display("Got io error: {}", source))]
-    IOError { source: std::io::Error }
+    IOError { source: std::io::Error },
 }
 
 impl ClientError {
-    pub fn check_status(
-        region: Region,
-        code: u16,
-    ) -> Result<(), ClientError> {
+    pub fn check_status(region: Region, code: u16) -> Result<(), ClientError> {
         use self::ClientError::*;
         match code {
             400 => Err(BadRequest),

@@ -3,10 +3,10 @@ use self::Inner::*;
 use std::convert::AsRef;
 use std::fmt;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct LanguageCode(Inner);
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 enum Inner {
     CzechRepublic,
     Greece,

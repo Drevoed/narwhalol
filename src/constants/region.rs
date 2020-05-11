@@ -2,10 +2,10 @@ use self::Inner::*;
 
 use std::convert::AsRef;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Region(Inner);
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Inner {
     BR,
     EUNE,

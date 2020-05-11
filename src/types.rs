@@ -1,18 +1,17 @@
-use hyper::{
-    client::HttpConnector, Body, Client as HttpClient, Uri,
-};
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use std::pin::Pin;
-use std::net::{Shutdown, TcpStream};
-use std::task::{Poll, Context};
-use futures::prelude::*;
-use std::io;
-use smol::{Async, Task};
+use crate::error::{ClientError, IOError, NativeTLSError, UnsupportedScheme, UrlNotParsed};
 use async_native_tls::TlsStream;
-use snafu::{OptionExt, ResultExt};
 use futures::future::BoxFuture;
-use crate::error::{NativeTLSError, UnsupportedScheme, UrlNotParsed, IOError, ClientError};
+use futures::prelude::*;
+use hyper::{client::HttpConnector, Body, Client as HttpClient, Uri};
+use parking_lot::Mutex;
+use smol::{Async, Task};
+use snafu::{OptionExt, ResultExt};
+use std::collections::HashMap;
+use std::io;
+use std::net::{Shutdown, TcpStream};
+use std::pin::Pin;
+use std::sync::Arc;
+use std::task::{Context, Poll};
 
 pub(crate) type Client = Arc<HttpClient<SmolConnector>>;
 pub(crate) type Cache<K = Uri, V = String> = Arc<Mutex<HashMap<K, V>>>;
@@ -53,10 +52,16 @@ impl hyper::service::Service<Uri> for SmolConnector {
                     // In case of HTTPS, establish a secure TLS connection first.
                     let addr = format!("{}:{}", uri.host().unwrap(), uri.port_u16().unwrap_or(443));
                     let stream = Async::<TcpStream>::connect(addr).await.context(IOError)?;
-                    let stream = async_native_tls::connect(host, stream).await.context(NativeTLSError)?;
+                    let stream = async_native_tls::connect(host, stream)
+                        .await
+                        .context(NativeTLSError)?;
                     Ok(SmolStream::Tls(stream))
                 }
-                scheme => return Err(ClientError::UnsupportedScheme {scheme: scheme.map(|s| s.to_owned())}),
+                scheme => {
+                    return Err(ClientError::UnsupportedScheme {
+                        scheme: scheme.map(|s| s.to_owned()),
+                    })
+                }
             }
         })
     }

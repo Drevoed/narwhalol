@@ -2,10 +2,10 @@ use std::convert::AsRef;
 use std::fmt;
 use Inner::*;
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct RankedTier(Inner);
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq)]
 enum Inner {
     Iron,
     Bronze,

@@ -2,10 +2,10 @@ use std::convert::AsRef;
 use std::fmt::{self, Debug};
 use Inner::*;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Eq)]
 pub struct Division(Inner);
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 enum Inner {
     I,
     II,
@@ -39,10 +39,10 @@ impl AsRef<str> for Division {
     }
 }
 
-impl<'a> PartialEq<&'a Division> for Division {
+impl<'a> PartialEq<&'a Division> for str {
     #[inline]
     fn eq(&self, other: &&'a Division) -> bool {
-        self == *other
+        self == other.as_ref()
     }
 }
 
@@ -50,6 +50,13 @@ impl<'a> PartialEq<Division> for &'a Division {
     #[inline]
     fn eq(&self, other: &Division) -> bool {
         *self == other
+    }
+}
+
+impl PartialEq<Division> for Division {
+    #[inline]
+    fn eq(&self, other: &Division) -> bool {
+        self == other
     }
 }
 
