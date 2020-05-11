@@ -1,9 +1,10 @@
 use crate::error::{ClientError, HyperError};
-use crate::types::{Cache, Client, SmolConnector, SmolExecutor};
+use crate::types::{Cache, Client};
 use futures::prelude::*;
 use hyper::header::HeaderValue;
 use hyper::{Body, Client as HttpClient, Request, Response, Uri};
 use log::debug;
+use crate::types::compat;
 
 use serde::de::DeserializeOwned;
 
@@ -47,8 +48,14 @@ pub(crate) async fn get_latest_ddragon_version(client: Client) -> Result<String,
 
 /// Helper function that constructs an https hyper client
 pub(crate) fn construct_hyper_client() -> Client {
-    let cli = HttpClient::builder()
-        .executor(SmolExecutor)
-        .build::<_, Body>(SmolConnector);
+    let mut builder = HttpClient::builder();
+    match () {
+        #[cfg(not(feature = "tokio_rt"))]
+        () => builder.executor(compat::CompatExecutor),
+        #[cfg(feature = "tokio_rt")]
+        () => ()
+    };
+    let cli = builder
+        .build::<_, Body>(compat::CompatConnector::new());
     Arc::new(cli)
 }

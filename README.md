@@ -17,19 +17,21 @@ what makes this library so fast.
 ## Advantages 
 - Support of many std Traits allowing hands-free convertations between types
 - Clean and concise Error messages
-- Caching of DDragon requests (work-in-progress)
+- Caching of identical requests
 - Is in development stage, issues and bugs will be fixed ASAP
-
-## Benchmarks
-
-```rust
-
-```
-
+- Supports all mainstream runtimes with feature flags ([smol](https://github.com/stjepang/smol), [async-std](https://github.com/async-rs/async-std), [tokio](https://github.com/tokio-rs/tokio))
 ## Example
 
 ```rust,no_run
-extern crate narhwalol;
+use narwhalol::LeagueClient;
+use smol;
 
-use narwhalol::
+fn main() {
+    let lapi = LeagueClient::new(Region::RU).unwrap();
+    let sum = smol::run(async {
+        lapi.get_summoner_by_name("Vetro").await.unwrap()
+    });
+
+    println!("got summoner: {:?}", &sum);
+}
 ```
